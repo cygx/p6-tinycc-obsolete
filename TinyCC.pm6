@@ -39,10 +39,10 @@ role TCC[Hash \api] {
         self;
     }
 
-    multi method to(Bool :$mem!) { self.to(MEM) }
-    multi method to(Bool :$exe!) { self.to(EXE) }
-    multi method to(Bool :$dll!) { self.to(DLL) }
-    multi method to(Bool :$obj!) { self.to(OBJ) }
+    multi method to(Bool :$MEM!) { self.to(MEM) }
+    multi method to(Bool :$EXE!) { self.to(EXE) }
+    multi method to(Bool :$DLL!) { self.to(DLL) }
+    multi method to(Bool :$OBJ!) { self.to(OBJ) }
 
     method compile($code) {
         die 'Compilation failure'

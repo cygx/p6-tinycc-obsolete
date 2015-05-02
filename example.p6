@@ -1,7 +1,7 @@
 use lib '.';
 use TinyCC;
 
-tcc.set(:L<.>).to(:mem);
+tcc.set(:L<.>).to(:MEM);
 tcc.define(NAME => '"cygx"');
 
 tcc.compile(q:to/__END__/);
