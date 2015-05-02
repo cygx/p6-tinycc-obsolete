@@ -15,6 +15,9 @@ class TCCState is repr('CPointer') {
 
 enum TCCOutputType <UNDEF MEM EXE DLL OBJ PREPROCESS>;
 
+my \RELOCATE_AUTO = nqp::box_i(1, Pointer); # no constant as CPointer
+                                            # cannot be serialized
+
 role TCC[Hash \api] {
     has TCCState $.state;
     has TCCOutputType $.output-type = UNDEF;
@@ -103,7 +106,7 @@ role TCC[Hash \api] {
         self;
     }
 
-    method relocate($ptr = BEGIN nqp::box_i(1, Pointer)) {
+    method relocate($ptr = RELOCATE_AUTO) {
         api<relocate>($!state, $ptr);
         $!relocated = True;
         self;
@@ -157,7 +160,7 @@ sub tcc_relocate(TCCState, Pointer --> int32) { * }
 sub tcc_get_symbol(TCCState, Str --> Pointer) { * }
 
 sub EXPORT(*@args) {
-    constant API = OUTER::.keys.grep(/^\&tcc_/);
+    constant API = [ OUTER::.keys.grep(/^\&tcc_/) ];
 
     for @args ||= %*ENV<LIBTCC> // 'libtcc' -> $native {
         my $state = try trait_mod:<is>(&tcc_new.clone, :$native).();
