@@ -2,11 +2,23 @@ use nqp;
 use NativeCall;
 
 class TCCState is repr('CPointer') {
-    method gist { "TCCState<0x{ nqp::unbox_i(self).base(16).lc }>" }
+    method new($value) {
+        nqp::box_i(nqp::unbox_i(nqp::decont($value)), TCCState);
+    }
+
+    method !hexval { sprintf '0x%x', nqp::unbox_i(self) }
+
+    method gist { "TCCState<{ self!hexval }>" }
+
+    method perl { "TCCState.new({ self!hexval })" }
 }
+
+enum TCCOutputType <UNDEF MEM EXE DLL OBJ PREPROCESS>;
 
 role TCC[Hash \api] {
     has TCCState $.state;
+    has TCCOutputType $.output-type = UNDEF;
+    has Bool $!relocated = False;
 
     method new(:$state = api<new>()) {
         self.bless(:$state);
@@ -21,11 +33,16 @@ role TCC[Hash \api] {
         self;
     }
 
-    multi method to(Bool :$mem!) { api<set_output_type>($!state, 1); self }
-    multi method to(Bool :$exe!) { api<set_output_type>($!state, 2); self }
-    multi method to(Bool :$dll!) { api<set_output_type>($!state, 3); self }
-    multi method to(Bool :$obj!) { api<set_output_type>($!state, 4); self }
-    multi method to(Bool :$pp!)  { api<set_output_type>($!state, 5); self }
+    multi method to($type) {
+        $!output-type = $type;
+        api<set_output_type>($!state, +$type);
+        self;
+    }
+
+    multi method to(Bool :$mem!) { self.to(MEM) }
+    multi method to(Bool :$exe!) { self.to(EXE) }
+    multi method to(Bool :$dll!) { self.to(DLL) }
+    multi method to(Bool :$obj!) { self.to(OBJ) }
 
     method compile($code) {
         die 'Compilation failure'
@@ -78,7 +95,33 @@ role TCC[Hash \api] {
         self;
     }
 
+    method declare(*%symbols) {
+        api<add_symbol>($!state, .key, .value) for %symbols;
+        self;
+    }
+
+    method relocate($ptr = BEGIN nqp::box_i(1, Pointer)) {
+        api<relocate>($!state, $ptr);
+        $!relocated = True;
+        self;
+    }
+
+    method memreq {
+        die "Invalid operation for output type $!output-type"
+            unless $!output-type == MEM;
+
+        api<relocate>($!state, Pointer);
+    }
+
+    method lookup($symbol) {
+        die "Not relocated" unless $!relocated;
+        api<get_symbol>($!state, $symbol);
+    }
+
     method dump($file) {
+        die "Invalid operation for output type $!output-type"
+            unless $!output-type == EXE | DLL | OBJ;
+
         api<output_file>($!state, $file);
     }
 }
@@ -101,24 +144,11 @@ sub tcc_compile_string(TCCState, Str --> int32) { * }
 sub tcc_set_output_type(TCCState, int32 --> int32) { * }
 sub tcc_add_library_path(TCCState, Str --> int32) { * }
 sub tcc_add_library(TCCState, Str --> int32) { * }
-
-# /* add a symbol to the compiled program */
-# LIBTCCAPI int tcc_add_symbol(TCCState *s, const char *name, const void *val);
-
+sub tcc_add_symbol(TCCState, Str, Pointer --> int32) { * }
 sub tcc_output_file(TCCState, Str --> int32) { * }
 sub tcc_run(TCCState, int32, CArray[Str] --> int32) { * }
-
-# /* do all relocations (needed before using tcc_get_symbol()) */
-# LIBTCCAPI int tcc_relocate(TCCState *s1, void *ptr);
-# /* possible values for 'ptr':
-#    - TCC_RELOCATE_AUTO : Allocate and manage memory internally
-#    - NULL              : return required memory size for the step below
-#    - memory address    : copy code to memory passed by the caller
-#    returns -1 if error. */
-# #define TCC_RELOCATE_AUTO (void*)1
-
-# /* return symbol value or NULL if not found */
-# LIBTCCAPI void *tcc_get_symbol(TCCState *s, const char *name);
+sub tcc_relocate(TCCState, Pointer --> int32) { * }
+sub tcc_get_symbol(TCCState, Str --> Pointer) { * }
 
 sub EXPORT(*@args) {
     constant API = OUTER::.keys.grep(/^\&tcc_/);
