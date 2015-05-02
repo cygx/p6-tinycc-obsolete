@@ -52,6 +52,9 @@ role TCC[Hash \api] {
     }
 
     method run(*@args) {
+        die "Already relocated"
+            if $!relocated;
+
         my $argc = +@args;
         my @argv := CArray[Str].new;
         @argv[$_] = @args[$_] for ^@args;
@@ -121,6 +124,9 @@ role TCC[Hash \api] {
     method dump($file) {
         die "Invalid operation for output type $!output-type"
             unless $!output-type == EXE | DLL | OBJ;
+
+        die "Already relocated"
+            if $!relocated;
 
         api<output_file>($!state, $file);
     }
