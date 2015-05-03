@@ -36,16 +36,16 @@ role TCC[Hash \api] {
         self;
     }
 
-    multi method to($type) {
+    multi method target($type) {
         $!output-type = $type;
         api<set_output_type>($!state, +$type);
         self;
     }
 
-    multi method to(Bool :$MEM!) { self.to(MEM) }
-    multi method to(Bool :$EXE!) { self.to(EXE) }
-    multi method to(Bool :$DLL!) { self.to(DLL) }
-    multi method to(Bool :$OBJ!) { self.to(OBJ) }
+    multi method target(Bool :$MEM!) { self.target(MEM) }
+    multi method target(Bool :$EXE!) { self.target(EXE) }
+    multi method target(Bool :$DLL!) { self.target(DLL) }
+    multi method target(Bool :$OBJ!) { self.target(OBJ) }
 
     method compile($code) {
         die 'Compilation failure'
