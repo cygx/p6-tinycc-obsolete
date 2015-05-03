@@ -1,4 +1,4 @@
-use lib '.';
+use lib 'blib';
 use TinyCC;
 
 tcc.set(:L<.>).to(:MEM);
