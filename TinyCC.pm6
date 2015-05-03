@@ -18,7 +18,7 @@ enum TCCOutputType <UNDEF MEM EXE DLL OBJ PREPROCESS>;
 my \RELOCATE_AUTO = nqp::box_i(1, Pointer); # no constant as CPointer
                                             # cannot be serialized
 
-role TCC[Hash \api] {
+role TCC[EnumMap \api] {
     has TCCState $.state;
     has TCCOutputType $.output-type = UNDEF;
     has Bool $!relocated = False;
@@ -167,7 +167,9 @@ sub EXPORT(*@args) {
         next unless defined $state;
 
         return EnumMap.new('tcc' => TCC[
-            %(API.map({ .substr(5) => trait_mod:<is>(::($_).clone, :$native) }))
+            EnumMap.new(API.map({
+                .substr(5) => trait_mod:<is>(::($_).clone, :$native)
+            }))
         ].new(:$state));
     }
 
