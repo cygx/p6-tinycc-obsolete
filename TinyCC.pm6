@@ -66,6 +66,10 @@ role TCC[EnumMap \api] {
     }
 
     multi method set(:$I, :$isystem, :$L, :$l) {
+        die sprintf "Unknown option%s %s passed",
+            %_ > 1 ?? 's' !! '', %_.keys.map('-' ~ *).join(', ')
+            if %_;
+
         api<add_include_path>($!state, $_) for $I.list;
         api<add_sysinclude_path>($!state, $_) for $isystem.list;
         api<add_library_path>($!state, $_) for $L.list;
