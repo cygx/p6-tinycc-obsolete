@@ -9,10 +9,10 @@ class TCCState is repr('CPointer') {
         nqp::box_i(nqp::unbox_i(nqp::decont($value)), TCCState);
     }
 
-    method !hexval { sprintf '0x%x', nqp::unbox_i(self) }
+    method Numeric { nqp::unbox_i(self) }
+    method !hexval { sprintf '0x%x', +self }
 
     method gist { "TCCState<{ self!hexval }>" }
-
     method perl { "TCCState.new({ self!hexval })" }
 }
 
