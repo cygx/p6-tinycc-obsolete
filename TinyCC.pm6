@@ -138,7 +138,8 @@ role TCC[EnumMap \api] {
         die "Already relocated"
             if $!relocated;
 
-        api<output_file>($!state, $file);
+        die "Failed to write output to '$file'"
+            if api<output_file>($!state, $file) < 0;
     }
 }
 
