@@ -37,8 +37,9 @@ The current development version of TinyCC itself can be found at
 
 # Bugs and Development
 
-Development happens at [GitHub](https://github.com/cygx/tinycc). If you
-found a bug or have a feature request, use the issue tracker over there.
+Development happens at [GitHub](https://github.com/cygx/p6-tinycc). If you
+found a bug or have a feature request, use the
+[issue tracker](https://github.com/cygx/p6-tinycc/issues) over there.
 
 
 # Copyright and License
