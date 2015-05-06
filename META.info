@@ -1,7 +1,7 @@
 {
     "name" : "TinyCC",
     "version" : "*",
-    "description" : "The Tiny C Compiler.",
+    "description" : "The Tiny C Compiler",
     "author" : "cygx <cygx@cpan.org>",
     "provides" : { "TinyCC" : "TinyCC.pm6" },
     "depends" : [ ],
