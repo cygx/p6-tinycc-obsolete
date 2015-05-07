@@ -16,14 +16,14 @@ class TCCState is repr('CPointer') {
     method perl { "TCCState.new({ self!hexval })" }
 }
 
-enum TCCOutputType <UNDEF MEM EXE DLL OBJ PREPROCESS>;
+enum TCCOutputType << :MEM(1) EXE DLL OBJ PREPROCESS >>;
 
 my \RELOCATE_AUTO = nqp::box_i(1, Pointer); # no constant as CPointer
                                             # cannot be serialized
 
 role TCC[EnumMap \api] {
     has TCCState $.state;
-    has TCCOutputType $.output-type = UNDEF;
+    has TCCOutputType $.output-type = MEM;
     has Bool $!relocated = False;
 
     method new(:$state = api<new>()) {
@@ -68,7 +68,7 @@ role TCC[EnumMap \api] {
         api<run>($!state, $argc, @argv);
     }
 
-    multi method set(:$I, :$isystem, :$L, :$l) {
+    multi method set(:$I, :$isystem, :$L, :$l, :$nostdlib) {
         die sprintf "Unknown option%s %s passed",
             %_ > 1 ?? 's' !! '', %_.keys.map('-' ~ *).join(', ')
             if %_;
@@ -77,6 +77,7 @@ role TCC[EnumMap \api] {
         api<add_sysinclude_path>($!state, $_) for $isystem.list;
         api<add_library_path>($!state, $_) for $L.list;
         api<add_library>($!state, $_) for $l.list;
+        self.set('-nostdlib') if $nostdlib;
         self;
     }
 
@@ -123,7 +124,7 @@ role TCC[EnumMap \api] {
         die "Invalid operation for output type $!output-type"
             unless $!output-type == MEM;
 
-        api<relocate>($!state, Pointer);
+        api<relocate>($!state, Nil);
     }
 
     method lookup($symbol) {
@@ -153,7 +154,7 @@ role TCC[EnumMap \api] {
 sub tcc_new(--> TCCState) { * }
 sub tcc_delete(TCCState) { * }
 sub tcc_set_lib_path(TCCState, Str) { * }
-sub tcc_set_error_func(TCCState, Pointer, &:(Pointer, Str)) { * }
+sub tcc_set_error_func(TCCState, Pointer, & (Pointer, Str)) { * }
 sub tcc_set_options(TCCState, Str --> int32) { * }
 sub tcc_add_include_path(TCCState, Str --> int32) { * }
 sub tcc_add_sysinclude_path(TCCState, Str --> int32) { * }
