@@ -141,16 +141,19 @@ role TCC[EnumMap \api] {
         die "Failed to write output to '$file'"
             if api<output_file>($!state, $file) < 0;
     }
+
+    # FIXME
+    method on-error(&cb, :$payload) {
+        warn "WARNING: Setting an error handler will segfault\n";
+        api<set_error_func>($!state, $payload, &cb);
+        self;
+    }
 }
 
 sub tcc_new(--> TCCState) { * }
 sub tcc_delete(TCCState) { * }
 sub tcc_set_lib_path(TCCState, Str) { * }
-
-# /* set error/warning display callback */
-# LIBTCCAPI void tcc_set_error_func(TCCState *s, void *error_opaque,
-#     void (*error_func)(void *opaque, const char *msg));
-
+sub tcc_set_error_func(TCCState, Pointer, &:(Pointer, Str)) { * }
 sub tcc_set_options(TCCState, Str --> int32) { * }
 sub tcc_add_include_path(TCCState, Str --> int32) { * }
 sub tcc_add_sysinclude_path(TCCState, Str --> int32) { * }
