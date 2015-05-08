@@ -170,6 +170,9 @@ The `TCC` class provides the following methods:
 
   * wraps `tcc_set_error_func`
 
+---
+
+
 
 # Bugs and Development
 
