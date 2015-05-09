@@ -6,8 +6,8 @@ export PERL6LIB = blib
 
 all: README.md $(MODULE)
 
-README.md: README.md.in README.md.p6 TinyCC.pm6
-	$(PERL6) $@.p6 <$@.in >$@
+README.md: build/README.md.in build/README.md.p6 TinyCC.pm6
+	$(PERL6) build/$@.p6 <build/$@.in >$@
 
 $(MODULE): TinyCC.pm6
 	$(PERL6) --target=mbc --output=$@ TinyCC.pm6

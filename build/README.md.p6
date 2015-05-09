@@ -39,6 +39,6 @@ my $api = join "\n", gather for 'TinyCC.pm6'.IO.lines {
     }
 }
 
-for 'README.md.in'.IO.lines {
+for $*IN.lines {
     say / __API__ / ?? $api !! $_;
 }
