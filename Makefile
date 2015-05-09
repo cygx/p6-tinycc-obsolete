@@ -6,7 +6,7 @@ export PERL6LIB = blib
 
 all: README.md $(MODULE)
 
-README.md: README.md.in README.md.p6
+README.md: README.md.in README.md.p6 TinyCC.pm6
 	$(PERL6) $@.p6 <$@.in >$@
 
 $(MODULE): TinyCC.pm6
