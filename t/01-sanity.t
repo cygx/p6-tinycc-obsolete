@@ -9,4 +9,4 @@ ok defined(tcc), 'TinyCC appears to have been loaded';
 ok defined(tcc.state), 'TinyCC state is defined';
 ok tcc.state != 0, 'TinyCC state is not NULL';
 
-done;
+done-testing;

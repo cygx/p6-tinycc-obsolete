@@ -21,7 +21,7 @@ enum TCCOutputType << :MEM(1) EXE DLL OBJ PREPROCESS >>;
 my \RELOCATE_AUTO = nqp::box_i(1, Pointer); # no constant as CPointer
                                             # cannot be serialized
 
-role TCC[EnumMap \api] {
+role TCC[Map \api] {
     has TCCState $.state;
     has TCCOutputType $.output-type = MEM;
     has Bool $!relocated = False;
@@ -73,10 +73,10 @@ role TCC[EnumMap \api] {
             %_ > 1 ?? 's' !! '', %_.keys.map('-' ~ *).join(', ')
             if %_;
 
-        api<add_include_path>($!state, $_) for $I.list;
-        api<add_sysinclude_path>($!state, $_) for $isystem.list;
-        api<add_library_path>($!state, $_) for $L.list;
-        api<add_library>($!state, $_) for $l.list;
+        api<add_include_path>($!state, $_) for $I // Empty;
+        api<add_sysinclude_path>($!state, $_) for $isystem // Empty;
+        api<add_library_path>($!state, $_) for $L // Empty;
+        api<add_library>($!state, $_) for $l // Empty;
         self.set('-nostdlib') if $nostdlib;
         self;
     }
@@ -87,10 +87,10 @@ role TCC[EnumMap \api] {
     }
 
     multi method add(:$bin, :$c, :$asm, :$asmpp) {
-        api<add_file>($!state, $_, 1) for $bin.list;
-        api<add_file>($!state, $_, 2) for $c.list;
-        api<add_file>($!state, $_, 3) for $asm.list;
-        api<add_file>($!state, $_, 4) for $asmpp.list;
+        api<add_file>($!state, $_, 1) for $bin // Empty;
+        api<add_file>($!state, $_, 2) for $c // Empty;
+        api<add_file>($!state, $_, 3) for $asm // Empty;
+        api<add_file>($!state, $_, 4) for $asmpp // Empty;
         self;
     }
 
@@ -178,8 +178,8 @@ sub EXPORT(*@args) {
         my $state = try trait_mod:<is>(&tcc_new.clone, :$native).();
         next unless defined $state;
 
-        return EnumMap.new('tcc' => TCC[
-            EnumMap.new(API.map({
+        return Map.new('tcc' => TCC[
+            Map.new(API.map({
                 .substr(5) => trait_mod:<is>(::($_).clone, :$native)
             }))
         ].new(:$state));

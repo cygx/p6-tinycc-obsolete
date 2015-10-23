@@ -15,4 +15,4 @@ tcc.dump($exe);
 ok run("./$exe") == 42, 'exe returned 42';
 unlink $exe;
 
-done;
+done-testing;
