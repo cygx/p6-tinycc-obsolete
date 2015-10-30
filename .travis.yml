@@ -1,0 +1,13 @@
+branches:
+  except:
+    - gh-pages
+language: perl6
+sudo: false
+perl6:
+  - latest
+install:
+  - git clone --depth=1 git://repo.or.cz/tinycc.git tcc && cd tcc && ./configure && make install
+  - rakudobrew build-panda
+  - panda install .
+script:
+  - make test
