@@ -4,7 +4,8 @@
     "description" : "The Tiny C Compiler [alpha version]",
     "author" : "cygx <cygx@cpan.org>",
     "provides" : {
-        "TinyCC" : "lib/TinyCC.pm6"
+        "TinyCC" : "lib/TinyCC.pm6",
+        "TinyCC::Eval" : "lib/TinyCC/Eval.pm6"
     },
     "depends" : [ ],
     "support" : {

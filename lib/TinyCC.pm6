@@ -18,8 +18,8 @@ class TCCState is repr('CPointer') {
 
 enum TCCOutputType <UNSET MEM EXE DLL OBJ PREPROCESS>;
 
-my \RELOCATE_AUTO = nqp::box_i(1, Pointer); # no constant as CPointer
-                                            # cannot be serialized
+# not a constant as CPointer cannot be serialized
+my &RELOCATE_AUTO = { once nqp::box_i(1, Pointer) }
 
 role TCC[Map \api] {
     has TCCState $.state;
@@ -173,19 +173,23 @@ sub tcc_run(TCCState, int32, CArray[Str] --> int32) { * }
 sub tcc_relocate(TCCState, Pointer --> int32) { * }
 sub tcc_get_symbol(TCCState, Str --> Pointer) { * }
 
-sub EXPORT(*@args) {
-    constant API = [ OUTER::.keys.grep(/^\&tcc_/) ];
+constant API = [ OUTER::.keys.grep(/^\&tcc_/) ];
 
-    for @args ||= %*ENV<LIBTCC> // 'libtcc' -> $native {
-        my $state = try trait_mod:<is>(&tcc_new.clone, :$native).();
-        next unless defined $state;
+module TinyCC {
+    our sub load(*@args) {
+        for @args ||= %*ENV<LIBTCC> // 'libtcc' -> $native {
+            my $state = try trait_mod:<is>(&tcc_new.clone, :$native).();
+            if defined $state {
+                return TCC[
+                    Map.new(API.map({
+                        .substr(5) => trait_mod:<is>(::($_).clone, :$native)
+                    }))
+                ].new(:$state);
+            }
+        }
 
-        return Map.new('tcc' => TCC[
-            Map.new(API.map({
-                .substr(5) => trait_mod:<is>(::($_).clone, :$native)
-            }))
-        ].new(:$state));
+        die "Failed to load TinyCC from '{ @args.join("', '") }'";
     }
-
-    die 'Failed to load TinyCC from ' ~ @args.map("'" ~ * ~ "'").join(', ');
 }
+
+sub EXPORT(*@args) { Map.new('&tcc' => { once TinyCC::load @args }) }
