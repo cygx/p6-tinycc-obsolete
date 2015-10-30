@@ -16,14 +16,14 @@ class TCCState is repr('CPointer') {
     method perl { "TCCState.new({ self!hexval })" }
 }
 
-enum TCCOutputType << :MEM(1) EXE DLL OBJ PREPROCESS >>;
+enum TCCOutputType <UNSET MEM EXE DLL OBJ PREPROCESS>;
 
 my \RELOCATE_AUTO = nqp::box_i(1, Pointer); # no constant as CPointer
                                             # cannot be serialized
 
 role TCC[Map \api] {
     has TCCState $.state;
-    has TCCOutputType $.output-type = MEM;
+    has TCCOutputType $.output-type = UNSET;
     has Bool $!relocated = False;
 
     method new(:$state = api<new>()) {
@@ -34,7 +34,7 @@ role TCC[Map \api] {
         api<delete>($!state);
     }
 
-    method path($path) {
+    method setroot($path) {
         api<set_lib_path>($!state, $path);
         self;
     }
@@ -51,25 +51,29 @@ role TCC[Map \api] {
     multi method target(Bool :$OBJ!) { self.target(OBJ) }
 
     method compile($code) {
-        die 'Compilation failure'
+        fail 'Compilation failure'
             if api<compile_string>($!state, $code) < 0;
 
         self;
     }
 
     method run(*@args) {
-        die "Already relocated"
+        fail "Already relocated"
             if $!relocated;
+
+        self.target(:MEM)
+            if $!output-type == UNSET;
 
         my $argc = +@args;
         my @argv := CArray[Str].new;
         @argv[$_] = @args[$_] for ^@args;
+        @argv[$argc] = Nil;
 
         api<run>($!state, $argc, @argv);
     }
 
     multi method set(:$I, :$isystem, :$L, :$l, :$nostdlib) {
-        die sprintf "Unknown option%s %s passed",
+        fail sprintf "Unknown option%s %s passed",
             %_ > 1 ?? 's' !! '', %_.keys.map('-' ~ *).join(', ')
             if %_;
 
@@ -121,31 +125,29 @@ role TCC[Map \api] {
     }
 
     method memreq {
-        die "Invalid operation for output type $!output-type"
+        fail "Invalid operation for output type $!output-type"
             unless $!output-type == MEM;
 
         api<relocate>($!state, Nil);
     }
 
     method lookup($symbol) {
-        die "Not relocated" unless $!relocated;
+        fail "Not relocated" unless $!relocated;
         api<get_symbol>($!state, $symbol);
     }
 
     method dump($file) {
-        die "Invalid operation for output type $!output-type"
+        fail "Invalid operation for output type $!output-type"
             unless $!output-type == EXE | DLL | OBJ;
 
-        die "Already relocated"
+        fail "Already relocated"
             if $!relocated;
 
-        die "Failed to write output to '$file'"
+        fail "Failed to write output to '$file'"
             if api<output_file>($!state, $file) < 0;
     }
 
-    # FIXME
-    method on-error(&cb, :$payload) {
-        warn "WARNING: Setting an error handler will segfault\n";
+    method catch(&cb, :$payload) {
         api<set_error_func>($!state, $payload, &cb);
         self;
     }
@@ -154,7 +156,7 @@ role TCC[Map \api] {
 sub tcc_new(--> TCCState) { * }
 sub tcc_delete(TCCState) { * }
 sub tcc_set_lib_path(TCCState, Str) { * }
-sub tcc_set_error_func(TCCState, Pointer, & (Pointer, Str)) { * }
+sub tcc_set_error_func(TCCState, Pointer, &cb (Pointer, Str)) { * }
 sub tcc_set_options(TCCState, Str --> int32) { * }
 sub tcc_add_include_path(TCCState, Str --> int32) { * }
 sub tcc_add_sysinclude_path(TCCState, Str --> int32) { * }

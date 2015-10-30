@@ -1,19 +1,24 @@
-PROVE  = prove
-PERL6  = perl6
-MODULE = blib/TinyCC.pm6.moarvm
+PROVE = prove
+PERL6 = perl6
+
+PM = lib/TinyCC.pm6
+BC = blib/TinyCC.pm6.moarvm
 
 export PERL6LIB = blib
 
-all: README.md $(MODULE)
+all: README.md $(BC)
 
-README.md: build/README.md.in build/README.md.p6 TinyCC.pm6
+clean:
+	rm -f $(BC)
+
+README.md: build/README.md.in build/README.md.p6 $(PM)
 	$(PERL6) build/$@.p6 <build/$@.in >$@
 
-$(MODULE): TinyCC.pm6
-	$(PERL6) --target=mbc --output=$@ TinyCC.pm6
+$(BC): $(PM)
+	$(PERL6) --target=mbc --output=$@ $(PM)
 
-test: $(MODULE)
+test: $(BC)
 	$(PROVE) -e '$(PERL6)' t
 
-t-%: t/%-*.t $(MODULE)
+t-%: t/%-*.t $(BC)
 	$<

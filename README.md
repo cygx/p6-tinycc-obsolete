@@ -7,9 +7,6 @@ TinyCC - The Tiny C Compiler
 ```
     use TinyCC;
 
-    # tells TinyCC where libtcc1.a can be found
-    tcc.set(:L<.>);
-
     tcc.define(NAME => '"cygx"');
     tcc.compile(q:to/__END__/);
         int puts(const char *);
@@ -51,7 +48,7 @@ The `TCC` class provides the following methods:
 
 ---
 
-    method path($path) { ... }
+    method setroot($path) { ... }
 
   * wraps `tcc_set_lib_path`
 
@@ -96,6 +93,7 @@ The `TCC` class provides the following methods:
     method run(*@args) { ... }
 
   * wraps `tcc_run`
+  * calls `TCC.target`
 
 ---
 
@@ -166,7 +164,7 @@ The `TCC` class provides the following methods:
 
 ---
 
-    method on-error(&cb, :$payload) { ... }
+    method catch(&cb, :$payload) { ... }
 
   * wraps `tcc_set_error_func`
 

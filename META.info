@@ -1,9 +1,15 @@
 {
     "name" : "TinyCC",
     "version" : "*",
-    "description" : "The Tiny C Compiler",
+    "description" : "The Tiny C Compiler [alpha version]",
     "author" : "cygx <cygx@cpan.org>",
-    "provides" : { "TinyCC" : "TinyCC.pm6" },
+    "provides" : {
+        "TinyCC" : "lib/TinyCC.pm6"
+    },
     "depends" : [ ],
+    "support" : {
+        "bugtracker" : "https://github.com/cygx/p6-tinycc/issues",
+        "source" : "https://github.com/cygx/p6-tinycc"
+    },
     "source-url" : "git://github.com/cygx/p6-tinycc.git"
 }

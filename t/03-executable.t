@@ -5,7 +5,9 @@ use v6;
 use Test;
 use TinyCC;
 
-tcc.set(:L<.>).target(:EXE);
+plan 1;
+
+tcc.target(:EXE);
 tcc.compile(q:to/__END__/);
     int main(void) { return 42; }
     __END__

@@ -7,9 +7,6 @@ TinyCC - The Tiny C Compiler
 ```
     use TinyCC;
 
-    # tells TinyCC where libtcc1.a can be found
-    tcc.set(:L<.>);
-
     tcc.define(NAME => '"cygx"');
     tcc.compile(q:to/__END__/);
         int puts(const char *);

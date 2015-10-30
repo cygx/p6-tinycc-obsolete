@@ -17,7 +17,7 @@ sub dump {
     %methods = ();
 }
 
-my $api = join "\n", gather for 'TinyCC.pm6'.IO.lines {
+my $api = join "\n", gather for 'lib/TinyCC.pm6'.IO.lines {
     next unless /^ 'role TCC[' / ff False;
 
     if /^ '}' / {
