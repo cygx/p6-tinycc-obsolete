@@ -9,7 +9,6 @@ before_install:
   - cd ~/build
   - git clone --depth=1 git://repo.or.cz/tinycc.git tcc
   - cd tcc && ./configure --disable-static && make
-  - cp libtcc1.a ~/build/cygx/p6-tinycc
   - export TCCROOT=$PWD
   - export LIBTCC=$PWD/libtcc.so.1.0
 install:
