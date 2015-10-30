@@ -146,7 +146,7 @@ The `TCC` class provides the following methods:
 
 ---
 
-    method memreq { ... }
+    method calcmemreq { ... }
 
   * wraps `tcc_relocate`
 

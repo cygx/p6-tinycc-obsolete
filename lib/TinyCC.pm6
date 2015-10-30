@@ -124,7 +124,7 @@ role TCC[Map \api] {
         self;
     }
 
-    method memreq {
+    method calcmemreq {
         fail "Invalid operation for output type $!output-type"
             unless $!output-type == MEM;
 
