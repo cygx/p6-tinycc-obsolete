@@ -1,6 +1,6 @@
-# Name
+# TinyCC [![Build Status](https://travis-ci.org/cygx/p6-tinycc.svg?branch=master)](https://travis-ci.org/cygx/p6-tinycc)
 
-TinyCC - The Tiny C Compiler
+The Tiny C Compiler
 
 # Synopsis
 
