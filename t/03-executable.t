@@ -7,6 +7,9 @@ use TinyCC;
 
 plan 1;
 
+tcc.setroot(%*ENV<TCCROOT>)
+    if %*ENV<TCCROOT>:exists;
+
 tcc.target(:EXE);
 tcc.compile(q:to/__END__/);
     int main(void) { return 42; }
