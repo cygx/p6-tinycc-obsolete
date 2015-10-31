@@ -24,8 +24,6 @@ The Tiny C Compiler
     use TinyCC::Eval;
     use NativeCall;
 
-    use NativeCall;
-
     my @out := CArray[uint64].new;
     @out[0] = 0;
 
