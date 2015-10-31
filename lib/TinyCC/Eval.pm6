@@ -5,10 +5,11 @@ use NativeCall;
 
 my class X::Eval::Comp is X::AdHoc {}
 
-multi EVAL(Cool $code, Str() :$lang! where 'C', :%symbols, :@lib) is export {
+multi EVAL(Cool $code, Str() :$lang! where 'C',
+            :%symbols, :$tcc, :@libtcc, :$root) is export {
     require TinyCC;
 
-    my \tcc = TinyCC::load(@lib);
+    my \tcc = $tcc // TinyCC::load(|@libtcc, :$root);
     LEAVE tcc.delete;
 
     my $error;

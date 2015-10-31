@@ -176,15 +176,29 @@ sub tcc_get_symbol(TCCState, Str --> Pointer) { * }
 constant API = [ OUTER::.keys.grep(/^\&tcc_/) ];
 
 module TinyCC {
-    our sub load(*@args) {
-        for @args ||= %*ENV<LIBTCC> // 'libtcc' -> $native {
+    my %defaults;
+    %defaults<libtcc> = %*ENV<LIBTCC> // 'libtcc';
+    %defaults<root> = %*ENV<TCCROOT>
+        if %*ENV<TCCROOT>:exists;
+
+    our sub defaults { %defaults }
+
+    our sub load(*@args, :$root) {
+        for @args ||= %defaults<libtcc> -> $native {
             my $state = try trait_mod:<is>(&tcc_new.clone, :$native).();
             if defined $state {
-                return TCC[
+                my $tcc = TCC[
                     Map.new(API.map({
                         .substr(5) => trait_mod:<is>(::($_).clone, :$native)
                     }))
                 ].new(:$state);
+
+                unless $root === False {
+                    $tcc.setroot($_)
+                        with $root // %defaults<root>;
+                }
+
+                return $tcc;
             }
         }
 

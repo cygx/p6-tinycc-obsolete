@@ -6,9 +6,6 @@ use TinyCC;
 
 say '1..1';
 
-tcc.setroot(%*ENV<TCCROOT>)
-    if %*ENV<TCCROOT>:exists;
-
 tcc.define(NAME => '"cygx"');
 tcc.compile(q:to/__END__/);
     int puts(const char *);
