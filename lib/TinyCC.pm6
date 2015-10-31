@@ -131,9 +131,13 @@ role TCC[Map \api] {
         api<relocate>($!state, Nil);
     }
 
-    method lookup($symbol) {
+    multi method lookup($symbol) {
         fail "Not relocated" unless $!relocated;
         api<get_symbol>($!state, $symbol);
+    }
+
+    multi method lookup($symbol, :$type!) {
+        nativecast(Pointer[$type], self.lookup($symbol));
     }
 
     method dump($file) {

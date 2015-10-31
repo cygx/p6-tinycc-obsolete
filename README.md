@@ -172,9 +172,15 @@ The `TCC` class provides the following methods:
 
 ---
 
-    method lookup($symbol) { ... }
+    multi method lookup($symbol) { ... }
 
   * wraps `tcc_get_symbol`
+
+---
+
+    multi method lookup($symbol, :$type!) { ... }
+
+  * calls `TCC.lookup`
 
 ---
 
