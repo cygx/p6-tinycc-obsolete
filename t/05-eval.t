@@ -18,7 +18,7 @@ plan 3;
     my @out := CArray[uint64].new;
     @out[0] = 0;
 
-    EVAL q:to/EOC/, :lang<C>, :symbols(:@out), :defines(N => 33);
+    EVAL q:to/__END__/, :lang<C>, :symbols(:@out), :defines(N => 33);
         extern unsigned long long out;
 
         static unsigned long long fib(unsigned n) {
@@ -28,7 +28,7 @@ plan 3;
         int main() {
             out = fib(N);
         }
-        EOC
+        __END__
 
     ok @out[0] == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
 }
