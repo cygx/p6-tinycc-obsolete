@@ -6,7 +6,8 @@ use NativeCall;
 my class X::Eval::Comp is X::AdHoc {}
 
 multi EVAL(Cool $code, Str() :$lang! where 'C',
-            :%symbols, :$tcc, :@libtcc, :$root) is export {
+            :%symbols, :%defines,
+            :$tcc, :@libtcc, :$root) is export {
     require TinyCC;
 
     my \tcc = $tcc // TinyCC::load(|@libtcc, :$root);
@@ -15,6 +16,7 @@ multi EVAL(Cool $code, Str() :$lang! where 'C',
     my $error;
     tcc.catch(-> $, Str $payload { $error = X::Eval::Comp.new(:$payload) });
     tcc.declare(|%(%symbols.pairs.map({ .key => nativecast(Pointer, .value) })));
+    tcc.define(|%(%defines.pairs.map({ .key => ~.value })));
 
     try tcc.compile(~$code);
     $error.?fail;

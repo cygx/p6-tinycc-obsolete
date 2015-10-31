@@ -20,6 +20,28 @@ The Tiny C Compiler
     tcc.delete;
 ```
 
+```
+    use TinyCC::Eval;
+    use NativeCall;
+
+    use NativeCall;
+
+    my @out := CArray[uint64].new;
+    @out[0] = 0;
+
+    EVAL q:to/EOC/, :lang<C>, :symbols(:@out), :defines(N => 33);
+        extern unsigned long long out;
+
+        static unsigned long long fib(unsigned n) {
+            return n < 2 ? n : fib(n - 1) + fib(n - 2);
+        }
+
+        int main() {
+            out = fib(N);
+        }
+        EOC
+```
+
 # Description
 
 Tries to load TinyCC from the shared library specified in `%*ENV<LIBTCC>`,
