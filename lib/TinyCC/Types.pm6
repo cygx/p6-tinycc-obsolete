@@ -4,9 +4,7 @@
 use NativeCall;
 use nqp;
 
-my constant Ptr is export = Pointer;
-
-my constant uintptr = do given nativesizeof(Pointer) {
+my \uintptr = do given nativesizeof(Pointer) {
     when 4 { uint32 }
     when 8 { uint64 }
     default { die }
@@ -44,7 +42,7 @@ sub lv(Pointer $ptr) is rw is export {
     nativecast(CArray[$ptr.of], $ptr).AT-POS(0);
 }
 
-proto cvar(|) is export {*}
+proto cvar(|) is rw is export {*}
 
 multi cvar(Mu:U $type, :$value) is rw {
     $type := c-to-nctype($type);

@@ -4,7 +4,7 @@
 use TinyCC;
 use TinyCC::Types;
 
-sub invokee(Ptr $fp, Signature $sig) {
+sub invokee($fp, Signature $sig) {
     my $address := +$fp;
     my $rtype := $sig.returns;
     if $rtype =:= Mu {
