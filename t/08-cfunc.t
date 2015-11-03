@@ -7,24 +7,23 @@ BEGIN say 1..3;
 use TinyCC::CFunc;
 use TinyCC { .sysinclude: <stdio.h> }
 
-sub ok1 is cfunc(tcc, { q:to/__END__/ }) {*}
-    puts("ok 1 - can print from C function");
-    fflush(stdout);
-    __END__
+sub ok($cond, $desc) {
+    say "{ $cond ?? '' !! 'not ' }ok { ++$ } - $desc";
+}
 
-sub plus(int \a, int \b --> int) is cfunc(tcc, { q:to/__END__/ }) {*}
+sub plus(int \a, int \b --> int) is cfunc({ q:to/__END__/ }, tcc) {*}
     return a + b;
     __END__
 
-sub minus(int \a, int \b --> int) is cfunc(tcc, { q:to/__END__/ }) {*}
+sub minus(int \a, int \b --> int) is cfunc({ q:to/__END__/ }, tcc) {*}
     return a - b;
     __END__
 
-my $count = 2;
-sub ok($cond, $desc) {
-    say "{ $cond ?? '' !! 'not ' }ok { $count++ } - $desc";
-}
+sub ok3 is cfunc({ q:to/__END__/ }, tcc) {*}
+    puts("ok 3 - can print from C function");
+    fflush(stdout);
+    __END__
 
-ok1;
 ok plus(3, 4) == 7 , 'can add numbers in C';
 ok minus(3, 4) == -1,  'can substract numbers in C';
+ok3;

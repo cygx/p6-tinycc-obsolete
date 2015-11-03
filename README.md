@@ -51,14 +51,15 @@ The Tiny C Compiler
 ```
 
 ```
-    use TinyCC *;
     use TinyCC::CFunc;
 
-    sub plus(int \a, int \b --> int) is cfunc(tcc, { q:to/__END__/ }) {*}
+    sub forty-two(--> int) is cfunc('return 42;') {*}
+
+    sub plus(int \a, int \b --> int) is cfunc({ q:to/__END__/ }) {*}
         return a + b;
         __END__
 
-    say plus(3, 4);
+    say plus(1, forty-two);
 ```
 
 ```

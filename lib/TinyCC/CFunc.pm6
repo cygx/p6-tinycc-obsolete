@@ -48,8 +48,8 @@ sub invokee(Ptr $fp, Signature $sig) {
 }
 
 multi trait_mod:<is>(Routine $r, :$cfunc!) is export {
-    given @$cfunc -> [ TinyCC \tcc, $arg where Stringy|Callable] {
-        tcc.compile($r, $_) given do given $arg {
+    given @$cfunc -> [ $arg where Stringy|Callable, TinyCC $tcc = TinyCC.new ] {
+        $tcc.compile($r, $_) given do given $arg {
             when Stringy { .Str }
             when Callable { .() }
         }
@@ -57,7 +57,7 @@ multi trait_mod:<is>(Routine $r, :$cfunc!) is export {
         my $handler := $r.wrap: sub (*@args) {
             $r.unwrap($handler);
             $handler := Nil;
-            $r.wrap: invokee(tcc.lookup($r.name), $r.signature);
+            $r.wrap: invokee($tcc.lookup($r.name), $r.signature);
             $r.(@args);
         }
     }
