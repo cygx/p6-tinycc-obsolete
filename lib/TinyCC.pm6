@@ -248,6 +248,9 @@ method !LOAD {
                 .substr(5) => trait_mod:<is>(::($_).clone, :$native);
             });
 
+            # HACK: should be a proper setting
+            $!api<set_lib_path>($!state, $_) with %*ENV<TCCROOT>;
+
             return;
         }
     }
