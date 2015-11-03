@@ -19,9 +19,9 @@ The Tiny C Compiler
 ```
 
 ```
-    use TinyCC *;
+    use TinyCC;
 
-    tcc.target(:EXE).compile(q:to/__END__/).dump('42.exe');
+    TinyCC.new.target(:EXE).compile(q:to/__END__/).dump('42.exe');
         int main(void) { return 42; }
         __END__
 
