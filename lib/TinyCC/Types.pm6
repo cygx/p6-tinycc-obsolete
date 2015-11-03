@@ -12,13 +12,6 @@ sub zero(Mu:U $type) {
     }
 }
 
-sub c-to-nctype(Mu:U $type) is export {
-    given $type {
-        when int { int32 }
-        default { $type }
-    }
-}
-
 proto rv($) is export {*}
 
 multi rv($ptr where $ptr.?of.REPR ne 'CPointer') {
@@ -36,34 +29,49 @@ sub lv($ptr) is rw is export {
 proto cvar(|) is rw is export {*}
 
 multi cvar(Mu:U $type, :$value) is rw {
-    $type := c-to-nctype($type);
     nc.array($type, $value // zero($type)).AT-POS(0);
 }
 
 multi cvar(Mu:U $type, $ptr is rw, :$value) is rw {
-    $type := c-to-nctype($type);
     my $carray := nc.array($type, $value // zero($type));
     $ptr = nc.cast-to-ptr-of($type, $carray);
     $carray.AT-POS(0);
 }
 
 multi cval(Mu:U $type, $value?) is export {
-    $type := c-to-nctype($type);
     nc.cast-to-ptr-of($type, nc.array($type, $value // zero($type)));
 }
 
+my constant TYPEMAP = {
+    Mu => 'void',
+    Bool => '_Bool',
+    # => 'char',
+    int8 => 'signed char',
+    uint8 => 'unsigned char',
+    int16 => 'short',
+    uint16 => 'unsigned short',
+    int32 => 'int',
+    uint32 => 'uint',
+    int => 'long',
+    uint => 'unsigned long',
+    longlong => 'long long',
+    Int => 'long long',
+    int64 => 'long long',
+    ulonglong => 'unisgned long long',
+    UInt => 'unsigned long long',
+    uint64 => 'unisgned long long',
+    num32 => 'float',
+    num => 'double',
+    Num => 'double',
+    num64 => 'double',
+}
+
+my constant REPRMAP = {
+    CPointer => 'void*',
+}
+
 sub ctype(Mu:U $type) is export {
-    given $type.^name {
-        when 'Mu' { 'void' }
-        when any <int int32> { 'int' }
-        when any <uint uint32> { 'unsigned int' }
-        when any <longlong int64> { 'long long' }
-        when any <ulonglong uint64> { 'unsigned long long' }
-        when any <num num64> { 'double'}
-        when 'num32' { 'float' }
-        when 'Pointer' { 'void*' }
-        default { die }
-    }
+    TYPEMAP{$type.^name} // REPRMAP{$type.REPR} // die;
 }
 
 sub cparams(@params) is export {

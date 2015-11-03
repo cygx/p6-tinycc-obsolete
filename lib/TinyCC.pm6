@@ -134,7 +134,7 @@ multi method lookup(Str $name) {
 }
 
 multi method lookup(Str $name, Mu:U $type) {
-    nc.cast-to-ptr-of(c-to-nctype($type), self.lookup($name));
+    nc.cast-to-ptr-of($type, self.lookup($name));
 }
 
 multi method lookup(Str $name, Mu:U :$var!) is rw {

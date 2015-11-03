@@ -37,6 +37,7 @@ sub invokee($fp, Signature $sig) {
 
         sub (*@args) {
             my \tcc = TinyCC.new;
+say $rtype;
             my $rv := cval($rtype);
             tcc.define(ARGS => cargs(@args).join(', '));
             tcc.declare(:$rv);
