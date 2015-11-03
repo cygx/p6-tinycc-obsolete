@@ -62,10 +62,9 @@ The Tiny C Compiler
 ```
 
 ```
-    use TinyCC *;
     use TinyCC::CCall;
 
-    sub abort is ccall(tcc) {*}
+    sub abort is ccall {*}
     abort;
 ```
 

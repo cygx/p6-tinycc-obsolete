@@ -48,8 +48,6 @@ sub callee(Str $name, Signature $sig) {
     }
 }
 
-multi trait_mod:<is>(Routine $r, :$ccall!) is export {
-    given @$ccall -> [ TinyCC $tcc, Str :$name ] {
-        $r.wrap: callee($name // $r.name, $r.signature);
-    }
+multi trait_mod:<is>(Routine $r, :ccall($name)!) is export {
+    $r.wrap: callee($name ~~ Bool ?? $r.name !! ~$name, $r.signature);
 }
