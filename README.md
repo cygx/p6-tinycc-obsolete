@@ -34,7 +34,7 @@ The Tiny C Compiler
 
     my $out = cval(uint64);
 
-    EVAL q:to/__END__/, :lang<C>, init => { .define: N => 100; .declare: :$out };
+    EVAL q:to/__END__/, :lang<C>, init => { .define: N => 42; .declare: :$out };
         extern unsigned long long out;
 
         static unsigned long long fib(unsigned n) {
