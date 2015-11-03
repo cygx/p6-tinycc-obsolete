@@ -1,8 +1,8 @@
 # Copyright 2015 cygx <cygx@cpan.org>
 # Distributed under the Boost Software License, Version 1.0
 
+use TinyCC::NC;
 use TinyCC::Types;
-use NativeCall;
 
 multi EXPORT { once Map.new  }
 multi EXPORT(Whatever) { Map.new('tcc' => ::<TinyCC>.new) }
@@ -14,47 +14,15 @@ multi EXPORT(&cb) {
 unit class TinyCC;
 
 my enum  <LOAD SET DEF INC TARGET DECL COMP RELOC DONE>;
-my &RELOCATE_AUTO = {
+
+use MONKEY-TYPING;
+augment class TCCState {
     use nqp;
-    once nqp::box_i(1, Pointer);
-}
-
-my class TCCState is repr<CPointer> {
-    method new($value) {
-        use nqp;
-        nqp::box_i(nqp::unbox_i($value), TCCState);
-    }
-
-    method Numeric {
-        use nqp;
-        nqp::unbox_i(self);
-    }
-
+    method new($value) { nqp::box_i(nqp::unbox_i($value), TCCState) }
+    method Numeric { nqp::unbox_i(self) }
     method gist { "TCCState|{ self.Numeric.base(16) }" }
     method perl { "TCCState.new({ self.Numeric.base(16) })" }
 }
-
-sub tcc_new(--> TCCState) {*}
-sub tcc_delete(TCCState) {*}
-sub tcc_set_lib_path(TCCState, Str) {*}
-sub tcc_set_error_func(TCCState, Pointer, &cb (Pointer, Str)) {*}
-sub tcc_set_options(TCCState, Str --> int32) {*}
-sub tcc_add_include_path(TCCState, Str --> int32) {*}
-sub tcc_add_sysinclude_path(TCCState, Str --> int32) {*}
-sub tcc_define_symbol(TCCState, Str, Str) {*}
-sub tcc_undefine_symbol(TCCState, Str) {*}
-sub tcc_add_file(TCCState, Str, int32 --> int32) {*}
-sub tcc_compile_string(TCCState, Str --> int32) {*}
-sub tcc_set_output_type(TCCState, int32 --> int32) {*}
-sub tcc_add_library_path(TCCState, Str --> int32) {*}
-sub tcc_add_library(TCCState, Str --> int32) {*}
-sub tcc_add_symbol(TCCState, Str, Pointer --> int32) {*}
-sub tcc_output_file(TCCState, Str --> int32) {*}
-sub tcc_run(TCCState, int32, CArray[Str] --> int32) {*}
-sub tcc_relocate(TCCState, Pointer --> int32) {*}
-sub tcc_get_symbol(TCCState, Str --> Pointer) {*}
-
-my constant API = [ OUTER::.keys.grep(/^\&tcc_/) ];
 
 has $.state;
 has $.stage = LOAD;
@@ -154,7 +122,7 @@ method relocate {
     die if $!stage != COMP;
     die if $!target != 1;
     self!COMPILE;
-    die if $!api<relocate>($!state, RELOCATE_AUTO) < 0;
+    die if $!api<relocate>($!state, api.RELOCATE_AUTO) < 0;
     $!stage = RELOC;
     self;
 }
@@ -166,19 +134,19 @@ multi method lookup(Str $name) {
 }
 
 multi method lookup(Str $name, Mu:U $type) {
-    nativecast(Pointer[c-to-nctype($type)], self.lookup($name));
+    nc.cast-to-ptr-of(c-to-nctype($type), self.lookup($name));
 }
 
 multi method lookup(Str $name, Mu:U :$var!) is rw {
     my $ptr := self.lookup($name);
-    nativecast(CArray[$var], $ptr).AT-POS(0);
+    nc.cast-to-array($var, $ptr).AT-POS(0);
 }
 
 method run(*@args) {
     die if $!stage != COMP;
     die if $!target != 1;
     self!COMPILE;
-    my $rv = $!api<run>($!state, +@args, CArray[Str].new(~<<@args, Str));
+    my $rv = $!api<run>($!state, +@args, nc.array(Str, ~<<@args, Str));
     self.destroy;
     $rv;
 }
@@ -212,7 +180,7 @@ method reset {
     self;
 }
 
-method catch(&cb, Pointer :$payload) {
+method catch(&cb, :$payload) {
     die if $!stage == DONE;
     $!errhandler = &cb;
     $!errpayload = $payload;
@@ -233,20 +201,17 @@ method !COMPILE {
     die if $!api<set_output_type>($!state, $!target) < 0;
 
     for %!decls.pairs {
-        die if $!api<add_symbol>(
-            $!state, .key, nativecast(Pointer, .value)) < 0;
+        die if $!api<add_symbol>($!state, .key, nc.cast-to-ptr(.value)) < 0;
     }
 
     die if $!api<compile_string>($!state, @!code.join("\n")) < 0;
 }
 
 method !LOAD {
-    for @!candidates || %*ENV<LIBTCC> || 'libtcc' -> $native {
-        with try trait_mod:<is>(&tcc_new.clone, :$native).() -> $state {
+    for @!candidates || %*ENV<LIBTCC> || 'libtcc' -> $lib {
+        with try api.new-state($lib) -> $state {
             $!state := $state;
-            $!api := Map.new(API.map: {
-                .substr(5) => trait_mod:<is>(::($_).clone, :$native);
-            });
+            $!api := api.load($lib);
 
             # HACK: should be a proper setting
             $!api<set_lib_path>($!state, $_) with %*ENV<TCCROOT>;

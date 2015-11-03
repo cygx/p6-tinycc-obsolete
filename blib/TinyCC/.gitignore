@@ -1,4 +1,5 @@
 CCall.pm6.moarvm
 CFunc.pm6.moarvm
 Eval.pm6.moarvm
+NC.pm6.moarvm
 Types.pm6.moarvm

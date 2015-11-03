@@ -5,7 +5,8 @@ BC = blib/TinyCC.pm6.moarvm \
      blib/TinyCC/CCall.pm6.moarvm \
      blib/TinyCC/CFunc.pm6.moarvm \
      blib/TinyCC/Eval.pm6.moarvm \
-     blib/TinyCC/Types.pm6.moarvm
+     blib/TinyCC/Types.pm6.moarvm \
+     blib/TinyCC/NC.pm6.moarvm
 
 export PERL6LIB = blib
 
@@ -21,6 +22,7 @@ blib/TinyCC.pm6.moarvm: blib/TinyCC/Types.pm6.moarvm
 blib/TinyCC/CCall.pm6.moarvm: blib/TinyCC.pm6.moarvm
 blib/TinyCC/CFunc.pm6.moarvm: blib/TinyCC.pm6.moarvm
 blib/TinyCC/Eval.pm6.moarvm: blib/TinyCC.pm6.moarvm
+blib/TinyCC/Types.pm6.moarvm: blib/TinyCC/NC.pm6.moarvm
 
 test: $(BC)
 	$(PROVE) -e '$(PERL6)' t

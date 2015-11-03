@@ -1,20 +1,13 @@
 # Copyright 2015 cygx <cygx@cpan.org>
 # Distributed under the Boost Software License, Version 1.0
 
-use NativeCall;
-use nqp;
-
-my \uintptr = do given nativesizeof(Pointer) {
-    when 4 { uint32 }
-    when 8 { uint64 }
-    default { die }
-}
+use TinyCC::NC;
 
 sub zero(Mu:U $type) {
     given ~$type.REPR {
         when 'P6int' { 0 }
         when 'P6num' { 0e0 }
-        when 'CPointer' { Pointer }
+        when 'CPointer' { $type }
         default { die }
     }
 }
@@ -26,39 +19,37 @@ sub c-to-nctype(Mu:U $type) is export {
     }
 }
 
-proto rv(Pointer) is export {*}
+proto rv($) is export {*}
 
-multi rv(Pointer $ptr where $ptr.of.REPR ne 'CPointer') {
-    nativecast($ptr.of, $ptr);
+multi rv($ptr where $ptr.?of.REPR ne 'CPointer') {
+    nc.cast($ptr.of, $ptr);
 }
 
-multi rv(Pointer $ptr where $ptr.of.REPR eq 'CPointer') {
-    nqp::box_i($ptr.of,
-        nativecast(uintptr,
-            nqp::box_i(Pointer[uintptr], nqp::unbox_i($ptr))));
+multi rv($ptr where $ptr.?of.REPR eq 'CPointer') {
+    nc.deref-ptr-of-ptr($ptr);
 }
 
-sub lv(Pointer $ptr) is rw is export {
-    nativecast(CArray[$ptr.of], $ptr).AT-POS(0);
+sub lv($ptr) is rw is export {
+    nc.cast-ptr-to-array($ptr).AT-POS(0);
 }
 
 proto cvar(|) is rw is export {*}
 
 multi cvar(Mu:U $type, :$value) is rw {
     $type := c-to-nctype($type);
-    CArray[$type].new($value // zero($type)).AT-POS(0);
+    nc.array($type, $value // zero($type)).AT-POS(0);
 }
 
 multi cvar(Mu:U $type, $ptr is rw, :$value) is rw {
     $type := c-to-nctype($type);
-    my $carray := CArray[$type].new($value // zero($type));
-    $ptr = nativecast(Pointer[$type], $carray);
+    my $carray := nc.array($type, $value // zero($type));
+    $ptr = nc.cast-to-ptr-of($type, $carray);
     $carray.AT-POS(0);
 }
 
 multi cval(Mu:U $type, $value?) is export {
     $type := c-to-nctype($type);
-    nativecast(Pointer[$type], CArray[$type].new($value // zero($type)));
+    nc.cast-to-ptr-of($type, nc.array($type, $value // zero($type)));
 }
 
 sub ctype(Mu:U $type) is export {

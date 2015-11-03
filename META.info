@@ -9,6 +9,7 @@
         "TinyCC::CCall" : "lib/TinyCC/CCall.pm6",
         "TinyCC::CFunc" : "lib/TinyCC/CFunc.pm6",
         "TinyCC::Eval"  : "lib/TinyCC/Eval.pm6",
+        "TinyCC::NC"    : "lib/TinyCC/NC.pm6",
         "TinyCC::Types" : "lib/TinyCC/Types.pm6"
     },
     "depends"     : [ ],
