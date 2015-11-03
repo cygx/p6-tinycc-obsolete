@@ -28,6 +28,7 @@ has $.state;
 has $.stage = LOAD;
 has $!api;
 has @!candidates;
+has $!root;
 has %!settings;
 has %!defs;
 has %!decls;
@@ -38,14 +39,14 @@ has $!errpayload;
 
 method gist { "TinyCC|$!stage" }
 
-method load(*@candidates, *%_ ()) {
+method load(*@candidates) {
     die if $!stage > LOAD;
     @!candidates = @candidates || %*ENV<LIBTCC> || 'libtcc';
     $!stage = SET;
     self;
 }
 
-method set($opts?, *%_ (:$I, :$isystem, :$L, :$l, Bool :$nostdlib)) {
+method set($opts?, :$I, :$isystem, :$L, :$l, Bool :$nostdlib, *% ()) {
     die if $!stage > SET;
     %!settings<nostdlib> = True if $nostdlib;
     %!settings.push:
@@ -57,6 +58,12 @@ method set($opts?, *%_ (:$I, :$isystem, :$L, :$l, Bool :$nostdlib)) {
     self;
 }
 
+method setroot($root) {
+    die if $!stage > SET;
+    $!root = $root;
+    self;
+}
+
 method define(*%defs) {
     die if $!stage > DEF;
     %!defs = %(%!defs, %defs);
@@ -64,31 +71,31 @@ method define(*%defs) {
     self;
 }
 
-method include(*@headers, *%_ ()) {
+method include(*@headers) {
     die if $!stage > INC;
     @!code.append: @headers.map({ "#include \"$_\"" });
     $!stage = INC;
     self;
 }
 
-method sysinclude(*@headers, *%_ ()) {
+method sysinclude(*@headers) {
     die if $!stage > INC;
     @!code.append: @headers.map({ "#include <$_>" });
     $!stage = INC;
     self;
 }
 
-proto method target(*%_) {
+proto method target(*%) {
     die if $!stage > TARGET;
     {*}
     $!stage = DECL;
     self;
 }
-multi method target(*%_ (Bool :$MEM!)) { $!target = 1 }
-multi method target(*%_ (Bool :$EXE!)) { $!target = 2 }
-multi method target(*%_ (Bool :$DLL!)) { $!target = 3 }
-multi method target(*%_ (Bool :$OBJ!)) { $!target = 4 }
-multi method target(*%_ (Bool :$PRE!)) { $!target = 5 }
+multi method target(Bool :$MEM!, *% ()) { $!target = 1 }
+multi method target(Bool :$EXE!, *% ()) { $!target = 2 }
+multi method target(Bool :$DLL!, *% ()) { $!target = 3 }
+multi method target(Bool :$OBJ!, *% ()) { $!target = 4 }
+multi method target(Bool :$PRE!, *% ()) { $!target = 5 }
 
 method declare(*%decls) {
     die if $!stage > DECL;
@@ -190,7 +197,20 @@ method catch(&cb, :$payload) {
 method !COMPILE {
     self!LOAD;
 
-    # TODO: settings
+    $!api<set_lib_path>($!state, $_) with $!root || %*ENV<TCCROOT> || Nil;
+
+    for %!settings<opts I isystem nostdlib L l>:kv -> $opt, $values {
+        for @$values -> $value {
+            die if $_ < 0 given do given $opt {
+                when 'opts' { $!api<set_options>($!state, ~$value) }
+                when 'I' { $!api<add_include_path>($!state, ~$value) }
+                when 'isystem' { $!api<add_sysinclude_path>($!state, ~$value) }
+                when 'L' { $!api<add_library_path>($!state, ~$value) }
+                when 'l' { $!api<add_library>($!state, ~$value) }
+                when 'nostdlib' { $!api<set_options>($!state, '-nostdlib') }
+            }
+        }
+    }
 
     $!api<set_error_func>($!state, $!errpayload, $!errhandler)
         if defined $!errhandler;
@@ -212,10 +232,6 @@ method !LOAD {
         with try api.new-state($lib) -> $state {
             $!state := $state;
             $!api := api.load($lib);
-
-            # HACK: should be a proper setting
-            $!api<set_lib_path>($!state, $_) with %*ENV<TCCROOT>;
-
             return;
         }
     }
