@@ -1,8 +1,8 @@
 #!/usr/bin/env perl6
 
 use v6;
-
 use Test;
+
 use TinyCC::Eval;
 use TinyCC::Types;
 
@@ -14,9 +14,8 @@ plan 3;
 }
 
 {
-    use NativeCall;
-
     my $out = cval(uint64);
+
     EVAL q:to/__END__/, :lang<C>, init => { .define: N => 33; .declare: :$out };
         extern unsigned long long out;
 
@@ -24,8 +23,9 @@ plan 3;
             return n < 2 ? n : fib(n - 1) + fib(n - 2);
         }
 
-        int main() {
+        int main(void) {
             out = fib(N);
+            return 0;
         }
         __END__
 
