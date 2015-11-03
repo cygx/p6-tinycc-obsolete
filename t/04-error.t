@@ -14,17 +14,17 @@ plan 3;
 {
     use TinyCC *;
     tcc.catch(-> | { die 'unexpected compilation error' });
-    ok tcc.compile(q:to/__END__/).run == 2, 'can use math function';
-        double log10(double);
+    ok tcc.compile(q:to/__END__/).run == 2, 'can use math.h function';
+        #include <math.h>
         int main(void) { return log10(100); }
         __END__
 }
 
 {
-    use TinyCC { .set: |:nostdlib };
-    tcc.catch(-> | { pass 'cannot use math function with -nostdlib' });
+    use TinyCC { .set: |:nostdinc };
+    tcc.catch(-> | { pass 'cannot use math.h function with -nostdinc' });
     try tcc.compile(q:to/__END__/).run;
-        double log10(double);
+        #include <math.h>
         int main(void) { return log10(100); }
         __END__
 }

@@ -46,15 +46,20 @@ method load(*@candidates) {
     self;
 }
 
-method set($opts?, :$I, :$isystem, :$L, :$l, Bool :$nostdlib, *% ()) {
+method set($opts?,
+    :$I, :$isystem, :$L, :$l,
+    Bool :$nostdlib, Bool :$nostdinc, *% ()) {
+
     die if $!stage > SET;
     %!settings<nostdlib> = True if $nostdlib;
+    %!settings<nostdinc> = True if $nostdinc;
     %!settings.push:
         defined($opts) ?? :$opts !! Empty,
         defined($I) ?? :$I !! Empty,
         defined($isystem) ?? :$isystem !! Empty,
         defined($L) ?? :$L !! Empty,
         defined($l) ?? :$l !! Empty;
+
     self;
 }
 
@@ -199,10 +204,11 @@ method !COMPILE {
 
     $!api<set_lib_path>($!state, $_) with $!root || %*ENV<TCCROOT> || Nil;
 
-    for %!settings<opts I isystem nostdlib L l>:kv -> $opt, $values {
+    for %!settings<opts nostdinc I isystem nostdlib L l>:kv -> $opt, $values {
         for @$values -> $value {
             die if $_ < 0 given do given $opt {
                 when 'opts' { $!api<set_options>($!state, ~$value) }
+                when 'nostdinc' { $!api<set_options>($!state, '-nostdinc') }
                 when 'I' { $!api<add_include_path>($!state, ~$value) }
                 when 'isystem' { $!api<add_sysinclude_path>($!state, ~$value) }
                 when 'L' { $!api<add_library_path>($!state, ~$value) }
