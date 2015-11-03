@@ -58,6 +58,11 @@ multi cvar(Mu:U $type, $ptr is rw, :$value) is rw {
     $carray.AT-POS(0);
 }
 
+multi cval(Mu:U $type, $value?) is export {
+    $type := c-to-nctype($type);
+    nativecast(Pointer[$type], CArray[$type].new($value // zero($type)));
+}
+
 sub ctype(Mu:U $type) is export {
     given $type.^name {
         when 'Mu' { 'void' }

@@ -16,11 +16,8 @@ plan 3;
 {
     use NativeCall;
 
-    my $ptr;
-    my $out := cvar(uint64, $ptr);
-    my &init = { .define: N => 33; .declare: out => $ptr }
-
-    EVAL q:to/__END__/, :lang<C>, :&init;
+    my $out = cval(uint64);
+    EVAL q:to/__END__/, :lang<C>, init => { .define: N => 33; .declare: :$out };
         extern unsigned long long out;
 
         static unsigned long long fib(unsigned n) {
@@ -32,7 +29,7 @@ plan 3;
         }
         __END__
 
-    ok $out == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
+    ok $out.deref == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
 }
 
 {
