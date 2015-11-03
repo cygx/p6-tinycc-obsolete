@@ -2,18 +2,15 @@
 
 use v6;
 
-use TinyCC;
+use TinyCC *;
 
 say '1..1';
 
 tcc.define(NAME => '"cygx"');
-tcc.compile(q:to/__END__/);
+tcc.compile(q:to/__END__/).run;
     int puts(const char *);
     int main(void) {
         puts("ok 1 -- Hello, " NAME "!");
         return 0;
     }
     __END__
-
-tcc.run;
-tcc.delete;

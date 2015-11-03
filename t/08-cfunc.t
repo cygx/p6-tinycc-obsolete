@@ -5,9 +5,7 @@ use v6;
 BEGIN say 1..3;
 
 use TinyCC::CFunc;
-use TinyCC {
-    .sysinclude: <stdio.h>;
-}
+use TinyCC { .sysinclude: <stdio.h> }
 
 sub ok1 is cfunc(tcc, { q:to/__END__/ }) {*}
     puts("ok 1 - can print from C function");

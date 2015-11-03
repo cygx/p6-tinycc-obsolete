@@ -21,6 +21,13 @@ sub zero(Mu:U $type) {
     }
 }
 
+sub c-to-nctype(Mu:U $type) is export {
+    given $type {
+        when int { int32 }
+        default { $type }
+    }
+}
+
 proto rv(Pointer) is export {*}
 
 multi rv(Pointer $ptr where $ptr.of.REPR ne 'CPointer') {
@@ -40,10 +47,12 @@ sub lv(Pointer $ptr) is rw is export {
 proto cvar(|) is export {*}
 
 multi cvar(Mu:U $type, :$value) is rw {
+    $type := c-to-nctype($type);
     CArray[$type].new($value // zero($type)).AT-POS(0);
 }
 
 multi cvar(Mu:U $type, $ptr is rw, :$value) is rw {
+    $type := c-to-nctype($type);
     my $carray := CArray[$type].new($value // zero($type));
     $ptr = nativecast(Pointer[$type], $carray);
     $carray.AT-POS(0);
@@ -60,13 +69,6 @@ sub ctype(Mu:U $type) is export {
         when 'num32' { 'float' }
         when 'Pointer' { 'void*' }
         default { die }
-    }
-}
-
-sub c-to-nctype(Mu:U $type) is export {
-    given $type {
-        when int { int32 }
-        default { $type }
     }
 }
 

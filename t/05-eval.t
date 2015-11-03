@@ -4,6 +4,7 @@ use v6;
 
 use Test;
 use TinyCC::Eval;
+use TinyCC::Types;
 
 plan 3;
 
@@ -15,10 +16,11 @@ plan 3;
 {
     use NativeCall;
 
-    my @out := CArray[uint64].new;
-    @out[0] = 0;
+    my $ptr;
+    my $out := cvar(uint64, $ptr);
+    my &init = { .define: N => 33; .declare: out => $ptr }
 
-    EVAL q:to/__END__/, :lang<C>, :symbols(:@out), :defines(N => 33);
+    EVAL q:to/__END__/, :lang<C>, :&init;
         extern unsigned long long out;
 
         static unsigned long long fib(unsigned n) {
@@ -30,7 +32,7 @@ plan 3;
         }
         __END__
 
-    ok @out[0] == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
+    ok $out == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
 }
 
 {
@@ -41,13 +43,13 @@ plan 3;
 
     my $point = Point.new(x => 0e0, y => 0e0);
 
-    EVAL q:to/OMEGA/, :lang<C>, :symbols(:$point);
+    EVAL q:to/__END__/, :lang<C>, init => { .declare: :$point };
         extern struct { double x, y; } point;
         int main() {
             point.x = 0.5;
             point.y = 1.5;
         }
-        OMEGA
+        __END__
 
     ok $point.x == 0.5 && $point.y == 1.5, 'can access CStruct from EVAL';
 }

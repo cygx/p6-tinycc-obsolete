@@ -3,11 +3,11 @@
 use v6;
 
 use Test;
-use TinyCC;
+use TinyCC *;
 
 plan 1;
 
 tcc.catch(-> | { pass 'Compilation error succesfully caught' });
-try tcc.compile('42');
+try tcc.compile('42').run;
 
 done-testing;

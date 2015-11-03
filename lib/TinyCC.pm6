@@ -56,9 +56,9 @@ sub tcc_get_symbol(TCCState, Str --> Pointer) {*}
 
 my constant API = [ OUTER::.keys.grep(/^\&tcc_/) ];
 
-has $!state;
+has $.state;
+has $.stage = LOAD;
 has $!api;
-has $!stage = LOAD;
 has @!candidates;
 has %!settings;
 has %!defs;
@@ -160,10 +160,19 @@ method relocate {
     self;
 }
 
-method lookup(Str $name) {
+multi method lookup(Str $name) {
     self.relocate if $!stage < RELOC;
     die if $!stage != RELOC;
     $!api<get_symbol>($!state, $name);
+}
+
+multi method lookup(Str $name, Mu:U $type) {
+    nativecast(Pointer[c-to-nctype($type)], self.lookup($name));
+}
+
+multi method lookup(Str $name, Mu:U :$var!) is rw {
+    my $ptr := self.lookup($name);
+    nativecast(CArray[$var], $ptr).AT-POS(0);
 }
 
 method run(*@args) {
@@ -204,7 +213,7 @@ method reset {
     self;
 }
 
-method catch(&cb:(Pointer, Str), Pointer :$payload) {
+method catch(&cb, Pointer :$payload) {
     die if $!stage == DONE;
     $!errhandler = &cb;
     $!errpayload = $payload;
