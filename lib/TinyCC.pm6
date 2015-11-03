@@ -112,7 +112,6 @@ method sysinclude(*@headers, *%_ ()) {
 
 proto method target(*%_) {
     die if $!stage > TARGET;
-    die if defined $!target;
     {*}
     $!stage = DECL;
     self;
@@ -184,11 +183,11 @@ method run(*@args) {
     $rv;
 }
 
-method dump {
+method dump(Str() $path) {
     die if $!stage != COMP;
     die unless $!target == 2|3|4;
     self!COMPILE;
-    ...;
+    die if $!api<output_file>($!state, $path) < 0;
     self.destroy;
 }
 

@@ -1,20 +1,21 @@
 #!/usr/bin/env perl6
 
 use v6;
-
 use Test;
-use TinyCC;
 
-plan 1;
+use TinyCC *;
 
-tcc.target(:EXE);
-tcc.compile(q:to/__END__/);
+plan 2;
+
+my $exe = 'test-42.exe';
+
+tcc.target(:EXE).compile(q:to/__END__/).dump($exe);
     int main(void) { return 42; }
     __END__
 
-my $exe = 'test-42.exe';
-tcc.dump($exe);
-ok run("./$exe") == 42, 'exe returned 42';
+pass 'executable compiled successfully';
+
+ok run("./$exe") == 42, 'executable returned expected value';
 unlink $exe;
 
 done-testing;
