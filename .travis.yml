@@ -7,16 +7,12 @@ sudo: false
 language: perl6
 perl6:
   - latest
-before_install:
-  - cd ~/build
-  - git clone --depth=1 git://repo.or.cz/tinycc.git tcc
-  - cd tcc && ./configure --disable-static && make
-  - export TCCROOT=$PWD
-  - export LIBTCC=$PWD/libtcc.so.1.0
 install:
   - cd ~/build
   - rakudobrew build-panda
-  - panda install cygx/p6-tinycc
+  - git clone --depth=1 git://repo.or.cz/tinycc.git tcc
+  - cd tcc && ./configure --disable-static && make && cd ..
+  - export TCCROOT=~/build/tcc && export LIBTCC=~/build/tcc/libtcc.so.1.0
 script:
-  - cd ~/build
+  - panda install cygx/p6-tinycc
   - make -C cygx/p6-tinycc test
