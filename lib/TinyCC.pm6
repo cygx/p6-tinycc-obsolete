@@ -211,11 +211,13 @@ class TinyCC {
             if $!stage != DONE;
 
         $!state := Nil;
-        $!api := Nil;
         $!stage = LOAD;
+        $!api := Nil;
         @!candidates = ();
+        $!root = Nil;
         %!settings = ();
         %!defs = ();
+        %!decls = ();
         $!target = 1;
         @!code = ();
         $!errhandler = Nil;
