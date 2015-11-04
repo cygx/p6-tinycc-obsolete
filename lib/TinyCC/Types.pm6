@@ -94,7 +94,7 @@ sub cargs(@args) is export {
     use nqp;
     @args.map: {
         when Numeric { ~.Numeric }
-        when .REPR eq 'CPointer' { "(void*){ nqp::unbox_i($_) }" }
+        when .REPR eq 'CPointer' { "(void*){ nqp::unbox_i($_ // 0) }" }
         default {
             die "Mapping of argument { .gist } not known";
         }
