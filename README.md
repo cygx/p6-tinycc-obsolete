@@ -1,9 +1,9 @@
-# TinyCC [![Build Status](https://travis-ci.org/cygx/p6-tinycc.svg?branch=master)](https://travis-ci.org/cygx/p6-tinycc)
+# TinyCC [![build status][TRAVISIMG]][TRAVIS]
 
 The Tiny C Compiler
 
 
-# Synopsis
+### Synopsis
 
 ```
     use TinyCC *;
@@ -25,7 +25,7 @@ The Tiny C Compiler
         int main(void) { return 42; }
         __END__
 
-    run("./42.exe");
+    run('./42.exe');
 ```
 
 ```
@@ -70,21 +70,53 @@ The Tiny C Compiler
 ```
 
 
-# Description
+### Description
 
-Too lazy to write anything up right now...
+The TinyCC C codebase can be found [in this repository][TINYCC]. A properly
+installed TinyCC should be recognized out of the box. If you want to use
+the compiler without installation, set the environment vars `LIBTCC` and
+`TCCROOT` appropriately or configure these at runtime via
+
+    use TinyCC {
+        .load: <candidate/path/one/to/libtcc candidate/path/two/to/libtcc>;
+        .setroot: 'path/to/tcc/build/dir';
+    };
+
+As the author is notoriously bad at writing documentation, for now you
+have to look at [the test][TESTS] or even [the module source][MODSOURCE]
+to see what is or is not implemented.
 
 
-# Bugs and Development
+### Known Issues
 
-Development happens at [GitHub](https://github.com/cygx/p6-tinycc). If you
-found a bug or have a feature request, use the
-[issue tracker](https://github.com/cygx/p6-tinycc/issues) over there.
+Rakudo's `NativeCall` interacts badly with precompilation, so the modules
+bytecode size and startup time leave something to be desired.
+
+Passing a block to the `use` statement is nice in principle. but
+problematic in practice: Any named argument occurring within gets silently
+adjusted to a positional one. You can work around this by either promoting the
+block to a `sub (@_) { ... }` or by always adding list interpolation to any
+named argument, ie use `|:arg` instead of plain `:arg`.
 
 
-# Copyright and License
+### Bugs and Development
+
+Development happens at [GitHub][SOURCE]. If you found a bug or have a feature
+request, use the [issue tracker][ISSUES] over there.
+
+
+### Copyright and License
 
 Copyright (C) 2015 by <cygx@cpan.org>
 
-Distributed under the
-[Boost Software License, Version 1.0](http://www.boost.org/LICENSE_1_0.txt)
+Distributed under the [Boost Software License, Version 1.0][LICENSE]
+
+
+[TRAVIS]:       https://travis-ci.org/cygx/p6-tinycc
+[TRAVISIMG]:    https://travis-ci.org/cygx/p6-tinycc.svg?branch=master
+[TINYCC]:       http://repo.or.cz/tinycc.git
+[SOURCE]:       https://github.com/cygx/p6-tinycc
+[ISSUES]:       https://github.com/cygx/p6-tinycc/issues
+[LICENSE]:      http://www.boost.org/LICENSE_1_0.txt
+[TESTS]:        https://github.com/cygx/p6-tinycc/tree/master/t
+[MODSOURCE]:    https://github.com/cygx/p6-tinycc/tree/master/lib
