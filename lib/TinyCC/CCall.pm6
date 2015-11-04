@@ -17,7 +17,7 @@ sub callee(Str $name, Signature $sig) {
             __END__
 
         sub (*@args) {
-            my \tcc = TinyCC.new;
+            my \tcc = $*TINYCC // TinyCC.new;
             tcc.define(ARGS => cargs(@args).join(', '));
             tcc.compile(CODE);
             tcc.run;
@@ -37,7 +37,7 @@ sub callee(Str $name, Signature $sig) {
             __END__
 
         sub (*@args) {
-            my \tcc = TinyCC.new;
+            my \tcc = $*TINYCC // TinyCC.new;
             my $rv := cval($rtype);
             tcc.define(ARGS => cargs(@args).join(', '));
             tcc.declare(:$rv);
