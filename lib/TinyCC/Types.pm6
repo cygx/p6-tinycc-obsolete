@@ -8,7 +8,7 @@ sub zero(Mu:U $type) {
         when 'P6int' { 0 }
         when 'P6num' { 0e0 }
         when 'CPointer' { $type }
-        default { die }
+        default { die "Zero initializer for type '$type' not known" }
     }
 }
 
@@ -71,7 +71,8 @@ my constant REPRMAP = {
 }
 
 sub ctype(Mu:U $type) is export {
-    TYPEMAP{$type.^name} // REPRMAP{$type.REPR} // die;
+    TYPEMAP{$type.^name} // REPRMAP{$type.REPR} //
+        die "Mapping of type '$type' to C equivalent not known";
 }
 
 sub cparams(@params) is export {
@@ -82,7 +83,10 @@ sub cparams(@params) is export {
             my $name := .name;
             defined($name) ?? "$ctype $name" !! $ctype;
         }
-        default { die }
+        default {
+            die "Only positional parameters can be passed on to C, \
+                but parameter '{ .name }' isn't";
+        }
     }
 }
 
@@ -91,6 +95,8 @@ sub cargs(@args) is export {
     @args.map: {
         when Numeric { ~.Numeric }
         when .REPR eq 'CPointer' { "(void*){ nqp::unbox_i($_) }" }
-        default { die }
+        default {
+            die "Mapping of argument { .gist } not known";
+        }
     }
 }

@@ -7,7 +7,7 @@ use NativeCall;
 my \uintptr = do given nativesizeof(Pointer) {
     when 4 { uint32 }
     when 8 { uint64 }
-    default { die }
+    default { die "Unsupported pointer size $_" }
 }
 
 my class nc is export {
