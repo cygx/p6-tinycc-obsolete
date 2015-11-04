@@ -1,13 +1,14 @@
 #!/usr/bin/env perl6
 
+# NOTE: the int types refer to P6-land native integers,
+#       which map to long long
+
 use v6;
 
 BEGIN say 1..3;
 
 use TinyCC::CFunc;
 use TinyCC { .sysinclude: <stdio.h> }
-
-constant int = int32;
 
 sub ok($cond, $desc) {
     say "{ $cond ?? '' !! 'not ' }ok { ++$ } - $desc";
