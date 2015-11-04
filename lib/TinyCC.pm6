@@ -4,6 +4,14 @@
 use TinyCC::NC;
 use TinyCC::Types;
 
+my class X::TinyCC is Exception {}
+
+my class X::TinyCC::OutOfOrder is X::TinyCC {
+    has $.action;
+    has $.stage;
+    method message { "Cannot perform '$!action' during stage $!stage" }
+}
+
 my enum  <LOAD SET DEF INC TARGET DECL COMP RELOC DONE>;
 
 use MONKEY-TYPING;
@@ -32,7 +40,9 @@ class TinyCC {
     method gist { "TinyCC|$!stage" }
 
     method load(*@candidates) {
-        die if $!stage > LOAD;
+        X::TinyCC::OutOfOrder.new(:action<load>, :$!stage).fail
+            if $!stage > LOAD;
+
         @!candidates = @candidates || %*ENV<LIBTCC> || 'libtcc';
         $!stage = SET;
         self;
@@ -42,7 +52,9 @@ class TinyCC {
         :$I, :$isystem, :$L, :$l,
         Bool :$nostdlib, Bool :$nostdinc, *% ()) {
 
-        die if $!stage > SET;
+        X::TinyCC::OutOfOrder.new(:action<set>, :$!stage).fail
+            if $!stage > SET;
+
         %!settings<nostdlib> = True if $nostdlib;
         %!settings<nostdinc> = True if $nostdinc;
         %!settings.push:
@@ -56,38 +68,49 @@ class TinyCC {
     }
 
     method setroot($root) {
-        die if $!stage > SET;
+        X::TinyCC::OutOfOrder.new(:action<setroot>, :$!stage).fail
+            if $!stage > SET;
+
         $!root = $root;
         self;
     }
 
     method define(*%defs) {
-        die if $!stage > DEF;
+        X::TinyCC::OutOfOrder.new(:action<define>, :$!stage).fail
+            if $!stage > DEF;
+
         %!defs = %(%!defs, %defs);
         $!stage = DEF;
         self;
     }
 
     method include(*@headers) {
-        die if $!stage > INC;
+        X::TinyCC::OutOfOrder.new(:action<include>, :$!stage).fail
+            if $!stage > INC;
+
         @!code.append: @headers.map({ "#include \"$_\"" });
         $!stage = INC;
         self;
     }
 
     method sysinclude(*@headers) {
-        die if $!stage > INC;
+        X::TinyCC::OutOfOrder.new(:action<sysinclude>, :$!stage).fail
+            if $!stage > INC;
+
         @!code.append: @headers.map({ "#include <$_>" });
         $!stage = INC;
         self;
     }
 
     proto method target(*%) {
-        die if $!stage > TARGET;
+        X::TinyCC::OutOfOrder.new(:action<target>, :$!stage).fail
+            if $!stage > TARGET;
+
         {*}
         $!stage = DECL;
         self;
     }
+
     multi method target(Bool :$MEM!, *% ()) { $!target = 1 }
     multi method target(Bool :$EXE!, *% ()) { $!target = 2 }
     multi method target(Bool :$DLL!, *% ()) { $!target = 3 }
@@ -95,21 +118,28 @@ class TinyCC {
     multi method target(Bool :$PRE!, *% ()) { $!target = 5 }
 
     method declare(*%decls) {
-        die if $!stage > DECL;
+        X::TinyCC::OutOfOrder.new(:action<declare>, :$!stage).fail
+            if $!stage > DECL;
+
         %!decls = %(%!decls, %decls);
         $!stage = DECL;
         self;
     }
 
-    multi method compile(Str $code) {
-        die if $!stage > COMP;
-        @!code.push: $code;
+    proto method compile(|) {
+        X::TinyCC::OutOfOrder.new(:action<compile>, :$!stage).fail
+            if $!stage > COMP;
+
+        {*}
         $!stage = COMP;
         self;
     }
 
+    multi method compile(Str $code) {
+        @!code.push: $code;
+    }
+
     multi method compile(Routine $r, Str $body) {
-        die if $!stage > COMP;
         my $name := $r.name;
         my $sig := cparams($r.signature.params).join(', ');
         my $type := ctype($r.signature.returns);
@@ -118,12 +148,12 @@ class TinyCC {
             { $body.chomp.indent(4) }
             }
             __END__
-        $!stage = COMP;
-        self;
     }
 
     method relocate {
-        die if $!stage != COMP;
+        X::TinyCC::OutOfOrder.new(:action<relocate>, :$!stage).fail
+            if $!stage != COMP;
+
         die if $!target != 1;
         self!COMPILE;
         die if $!api<relocate>($!state, api.RELOCATE_AUTO) < 0;
@@ -133,7 +163,9 @@ class TinyCC {
 
     multi method lookup(Str $name) {
         self.relocate if $!stage < RELOC;
-        die if $!stage != RELOC;
+        X::TinyCC::OutOfOrder.new(:action<lookup>, :$!stage).fail
+            if $!stage != RELOC;
+
         $!api<get_symbol>($!state, $name);
     }
 
@@ -147,7 +179,9 @@ class TinyCC {
     }
 
     method run(*@args) {
-        die if $!stage != COMP;
+        X::TinyCC::OutOfOrder.new(:action<run>, :$!stage).fail
+            if $!stage != COMP;
+
         die if $!target != 1;
         self!COMPILE;
         my $rv = $!api<run>($!state, +@args, nc.array(Str, ~<<@args, Str));
@@ -156,7 +190,9 @@ class TinyCC {
     }
 
     method dump(Str() $path) {
-        die if $!stage != COMP;
+        X::TinyCC::OutOfOrder.new(:action<dump>, :$!stage).fail
+            if $!stage != COMP;
+
         die unless $!target == 2|3|4;
         self!COMPILE;
         die if $!api<output_file>($!state, $path) < 0;
@@ -164,13 +200,16 @@ class TinyCC {
     }
 
     method destroy {
+        die unless $!state;
         $!api<delete>($!state);
         $!stage = DONE;
         self;
     }
 
     method reset {
-        die if $!stage != DONE;
+        X::TinyCC::OutOfOrder.new(:action<reset>, :$!stage).fail
+            if $!stage != DONE;
+
         $!state := Nil;
         $!api := Nil;
         $!stage = LOAD;
@@ -185,7 +224,9 @@ class TinyCC {
     }
 
     method catch(&cb, :$payload) {
-        die if $!stage == DONE;
+        X::TinyCC::OutOfOrder.new(:action<catch>, :$!stage).fail
+            if $!stage == DONE;
+
         $!errhandler = &cb;
         $!errpayload = $payload;
         self;
