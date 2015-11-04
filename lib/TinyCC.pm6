@@ -253,12 +253,15 @@ class TinyCC {
     method reuse(Bool :$api, Bool :$candidates, Bool :$root, Bool :$settings,
             Bool :$defs, Bool :$decls, Bool :$target, Bool :$code,
             Bool :$errhandler, Bool :$errpayload) {
+
         self!DELETE;
+
         if $api === False {
             $!api := Nil ;
             $!stage = LOAD;
         }
         else { $!stage = SET }
+
         @!candidates = () unless $candidates === True;
         $!root = Nil if $root === False;
         %!settings if $settings === False;
@@ -268,6 +271,8 @@ class TinyCC {
         @!code = () unless $code === True;
         $!errhandler = Nil unless $errhandler === True;
         $!errpayload = Nil unless $errhandler === True;
+
+        $!stage = COMP if $code === True;
 
         self;
     }
