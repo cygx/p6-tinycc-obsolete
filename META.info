@@ -1,7 +1,7 @@
 {
     "name"        : "TinyCC",
     "version"     : "*",
-    "description" : "The Tiny C Compiler [version alpha2]",
+    "description" : "The Tiny C Compiler",
     "author"      : "cygx <cygx@cpan.org>",
     "source-url"  : "git://github.com/cygx/p6-tinycc.git",
     "provides"    : {

@@ -73,7 +73,7 @@ The Tiny C Compiler
 ### Description
 
 The TinyCC C codebase can be found [in this repository][TINYCC]. A properly
-installed TinyCC should be recognized out of the box. If you want to use
+installed compiler should be recognized out of the box. If you want to use
 the compiler without installation, set the environment vars `LIBTCC` and
 `TCCROOT` appropriately or configure these at runtime via
 
@@ -83,25 +83,25 @@ the compiler without installation, set the environment vars `LIBTCC` and
     };
 
 As the author is notoriously bad at writing documentation, for now you
-have to look at [the test][TESTS] or even [the module source][MODSOURCE]
+have to look at [the tests][TESTS] or even [the module source][MODSOURCE]
 to see what is or is not implemented.
 
 
 ### Known Issues
 
-Rakudo's `NativeCall` interacts badly with precompilation, so the modules
+Rakudo's `NativeCall` interacts badly with precompilation, so the module's
 bytecode size and startup time leave something to be desired.
 
-Passing a block to the `use` statement is nice in principle. but
+Passing a block to the `use` statement is nice in principle, but
 problematic in practice: Any named argument occurring within gets silently
-adjusted to a positional one. You can work around this by either promoting the
-block to a `sub (@_) { ... }` or by always adding list interpolation to any
+adjusted to a positional one. You can work around this by either promoting
+the block to a `sub (@_) { ... }` or by adding list interpolation to any
 named argument, ie use `|:arg` instead of plain `:arg`.
 
 
 ### Bugs and Development
 
-Development happens at [GitHub][SOURCE]. If you found a bug or have a feature
+Development happens [at GitHub][SOURCE]. If you found a bug or have a feature
 request, use the [issue tracker][ISSUES] over there.
 
 
