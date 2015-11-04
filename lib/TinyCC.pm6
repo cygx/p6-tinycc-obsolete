@@ -4,6 +4,9 @@
 use TinyCC::NC;
 use TinyCC::Types;
 
+my enum  <LOAD SET DEF INC TARGET DECL COMP RELOC DONE>;
+my constant TARGETS = <_ MEM EXE DLL OBJ PRE>;
+
 my class X::TinyCC is Exception {}
 
 my class X::TinyCC::OutOfOrder is X::TinyCC {
@@ -12,7 +15,24 @@ my class X::TinyCC::OutOfOrder is X::TinyCC {
     method message { "Cannot perform '$!action' during stage $!stage" }
 }
 
-my enum  <LOAD SET DEF INC TARGET DECL COMP RELOC DONE>;
+my class X::TinyCC::NotFound is X::TinyCC {
+    has @.candidates;
+    method message {
+        "Could not find TinyCC at any of\n" ~
+            @!candidates.map({ "  $_\n" }).join;
+    }
+}
+
+my class X::TinyCC::WrongTarget is X::TinyCC {
+    has $.action;
+    has $.target;
+    method message { "Cannot do '$!action' targeting { TARGETS[$.target] }" }
+}
+
+my class X::TinyCC::FailedCall is X::TinyCC {
+    has $.call;
+    method message { "The call to tcc_$!call\() failed" }
+}
 
 use MONKEY-TYPING;
 augment class TCCState {
@@ -154,9 +174,13 @@ class TinyCC {
         X::TinyCC::OutOfOrder.new(:action<relocate>, :$!stage).fail
             if $!stage != COMP;
 
-        die if $!target != 1;
+        X::TinyCC::WrongTarget.new(:action<relocate>, :$!target).fail
+            if $!target != 1;
+
         self!COMPILE;
-        die if $!api<relocate>($!state, api.RELOCATE_AUTO) < 0;
+        X::TinyCC::FailedCall.new(:call<relocate>).fail
+            if $!api<relocate>($!state, api.RELOCATE_AUTO) < 0;
+
         $!stage = RELOC;
         self;
     }
@@ -182,7 +206,9 @@ class TinyCC {
         X::TinyCC::OutOfOrder.new(:action<run>, :$!stage).fail
             if $!stage != COMP;
 
-        die if $!target != 1;
+        X::TinyCC::WrongTarget.new(:action<run>, :$!target).fail
+            if $!target != 1;
+
         self!COMPILE;
         my $rv = $!api<run>($!state, +@args, nc.array(Str, ~<<@args, Str));
         self.destroy;
@@ -193,9 +219,13 @@ class TinyCC {
         X::TinyCC::OutOfOrder.new(:action<dump>, :$!stage).fail
             if $!stage != COMP;
 
-        die unless $!target == 2|3|4;
+        X::TinyCC::WrongTarget.new(:action<dump>, :$!target).fail
+            unless $!target == 2|3|4;
+
         self!COMPILE;
-        die if $!api<output_file>($!state, $path) < 0;
+        X::TinyCC::FailedCall.new(:call<output_file>).fail
+            if $!api<output_file>($!state, $path) < 0;
+
         self.destroy;
     }
 
@@ -243,16 +273,36 @@ class TinyCC {
                 $opt, $values {
 
             for @$values -> $value {
-                die if $_ < 0 given do given $opt {
-                    when 'opts' { $!api<set_options>($!state, ~$value) }
-                    when 'nostdinc' { $!api<set_options>($!state, '-nostdinc') }
-                    when 'I' { $!api<add_include_path>($!state, ~$value) }
-                    when 'isystem' {
-                        $!api<add_sysinclude_path>($!state, ~$value);
+                my $call;
+                X::TinyCC::FailedCall.new(:$call).fail
+                        if $_ < 0 given do given $opt {
+                    when 'opts' {
+                        $!api{$call = 'set_options'}($!state, ~$value);
                     }
-                    when 'L' { $!api<add_library_path>($!state, ~$value) }
-                    when 'l' { $!api<add_library>($!state, ~$value) }
-                    when 'nostdlib' { $!api<set_options>($!state, '-nostdlib') }
+
+                    when 'nostdinc' {
+                        $!api{$call = 'set_options'}($!state, '-nostdinc');
+                    }
+
+                    when 'I' {
+                        $!api{$call = 'add_include_path'}($!state, ~$value);
+                    }
+
+                    when 'isystem' {
+                        $!api{$call = 'add_sysinclude_path'}($!state, ~$value);
+                    }
+
+                    when 'L' {
+                        $!api{$call = 'add_library_path'}($!state, ~$value);
+                    }
+
+                    when 'l' {
+                        $!api{$call = 'add_library'}($!state, ~$value);
+                    }
+
+                    when 'nostdlib' {
+                        $!api{$call = 'set_options'}($!state, '-nostdlib');
+                    }
                 }
             }
         }
@@ -263,17 +313,22 @@ class TinyCC {
         $!api<define_symbol>($!state, .key, ~.value)
             for %!defs.pairs;
 
-        die if $!api<set_output_type>($!state, $!target) < 0;
+        X::TinyCC::FailedCall.new(:call<set_output_type>).fail
+            if $!api<set_output_type>($!state, $!target) < 0;
 
         for %!decls.pairs {
-            die if $!api<add_symbol>($!state, .key, nc.cast-to-ptr(.value)) < 0;
+            X::TinyCC::FailedCall.new(:call<add_symbol>).fail
+                if $!api<add_symbol>($!state, .key, nc.cast-to-ptr(.value)) < 0;
         }
 
-        die if $!api<compile_string>($!state, @!code.join("\n")) < 0;
+        X::TinyCC::FailedCall.new(:call<compile_string>).fail
+            if $!api<compile_string>($!state, @!code.join("\n")) < 0;
     }
 
     method !LOAD {
-        for @!candidates || %*ENV<LIBTCC> || 'libtcc' -> $lib {
+        my @candidates = @!candidates || %*ENV<LIBTCC> || 'libtcc';
+
+        for @candidates -> $lib {
             with try api.new-state($lib) -> $state {
                 $!state := $state;
                 $!api := api.load($lib);
@@ -281,7 +336,7 @@ class TinyCC {
             }
         }
 
-        die;
+        X::TinyCC::NotFound.new(:@candidates).fail;
     }
 }
 
