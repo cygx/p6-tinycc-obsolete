@@ -44,18 +44,19 @@ augment class TCCState {
 }
 
 class TinyCC {
-    has $.state;
-    has $.stage = LOAD;
-    has $!api;
-    has @!candidates;
-    has $!root;
-    has %!settings;
-    has %!defs;
-    has %!decls;
-    has $!target = 1;
-    has @!code;
-    has $!errhandler;
-    has $!errpayload;
+                        # what happens on reuse:
+    has $.state;        # always destroyed
+    has $.stage = LOAD; # always adjusted
+    has $!api;          # kept by default
+    has @!candidates;   # discarded by default
+    has $!root;         # kept by default
+    has %!settings;     # kept by default
+    has %!defs;         # kept by default
+    has %!decls;        # discarded by default
+    has $!target = 1;   # kept by default
+    has @!code;         # discarded by default
+    has $!errhandler;   # discarded by default
+    has $!errpayload;   # discarded by default
 
     method gist { "TinyCC|$!stage" }
 
@@ -211,7 +212,7 @@ class TinyCC {
 
         self!COMPILE;
         my $rv = $!api<run>($!state, +@args, nc.array(Str, ~<<@args, Str));
-        self.destroy;
+        self!DELETE;
         $rv;
     }
 
@@ -226,21 +227,12 @@ class TinyCC {
         X::TinyCC::FailedCall.new(:call<output_file>).fail
             if $!api<output_file>($!state, $path) < 0;
 
-        self.destroy;
-    }
-
-    method destroy {
-        die unless $!state;
-        $!api<delete>($!state);
-        $!stage = DONE;
+        self!DELETE;
         self;
     }
 
-    method reset {
-        X::TinyCC::OutOfOrder.new(:action<reset>, :$!stage).fail
-            if $!stage != DONE;
-
-        $!state := Nil;
+    method discard {
+        self!DELETE;
         $!stage = LOAD;
         $!api := Nil;
         @!candidates = ();
@@ -252,6 +244,29 @@ class TinyCC {
         @!code = ();
         $!errhandler = Nil;
         $!errpayload = Nil;
+
+        self;
+    }
+
+    method reuse(Bool :$api, Bool :$candidates, Bool :$root, Bool :$settings,
+            Bool :$defs, Bool :$decls, Bool :$target, Bool :$code,
+            Bool :$errhandler, Bool :$errpayload) {
+        self!DELETE;
+        if $api === False {
+            $!api := Nil ;
+            $!stage = LOAD;
+        }
+        else { $!stage = SET }
+        @!candidates = () unless $candidates === True;
+        $!root = Nil if $root === False;
+        %!settings if $settings === False;
+        %!defs if $defs === False;
+        %!decls unless $decls === True;
+        $!target = 1 if $target === False;
+        @!code = () unless $code === True;
+        $!errhandler = Nil unless $errhandler === True;
+        $!errpayload = Nil unless $errhandler === True;
+
         self;
     }
 
@@ -262,6 +277,12 @@ class TinyCC {
         $!errhandler = &cb;
         $!errpayload = $payload;
         self;
+    }
+
+    method !DELETE {
+        $!api<delete>($!state) if $!state;
+        $!state := Nil;
+        $!stage = DONE;
     }
 
     method !COMPILE {

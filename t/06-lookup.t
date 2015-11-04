@@ -8,7 +8,7 @@ plan 4;
 
 {
     use TinyCC *;
-    LEAVE tcc.destroy;
+    LEAVE tcc.discard;
 
     tcc.set(:nostdlib);
     tcc.compile(q:to/__END__/);
