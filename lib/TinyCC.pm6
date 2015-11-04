@@ -58,6 +58,8 @@ class TinyCC {
     has $!errhandler;   # discarded by default
     has $!errpayload;   # discarded by default
 
+    submethod DESTROY { self!DELETE }
+
     method gist { "TinyCC|$!stage" }
 
     method load(*@candidates) {
