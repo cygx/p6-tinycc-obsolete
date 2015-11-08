@@ -173,6 +173,10 @@ class TinyCC {
             __END__
     }
 
+    multi method compile(Str $code, Bool :$x!) {
+        @!code.push: "int main(void) \{ return $code; }";
+    }
+
     method relocate {
         X::TinyCC::OutOfOrder.new(:action<relocate>, :$!stage).fail
             if $!stage != COMP;

@@ -3,6 +3,7 @@ notifications:
 branches:
   except:
     - gh-pages
+    - wip
 sudo: false
 language: perl6
 perl6:
