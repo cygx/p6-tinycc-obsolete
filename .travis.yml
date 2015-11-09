@@ -4,6 +4,7 @@ branches:
   except:
     - gh-pages
     - wip
+    - bootstrap2
 sudo: false
 language: perl6
 perl6:

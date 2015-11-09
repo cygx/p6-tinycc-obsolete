@@ -18,12 +18,15 @@ sub tccbind(Ptr $fp, Signature $sig) is export {
             }
             __END__
 
-        sub (*@args, TinyCC :$tcc) {
+        sub (|args, TinyCC :$tcc) {
+            fail "Arguments { args.gist } do not match signature { $sig.gist }"
+                unless args ~~ $sig;
+
             my \CLEANUP = not $tcc // $*TINYCC;
             my \tcc = $tcc // $*TINYCC // TinyCC.new;
             LEAVE { tcc.discard if CLEANUP }
 
-            tcc.define(ARGS => cargs(@args).join(', '));
+            tcc.define(ARGS => cargs(args.list).join(', '));
             tcc.compile(CODE).run;
             Nil;
         }
@@ -39,13 +42,16 @@ sub tccbind(Ptr $fp, Signature $sig) is export {
             }
             __END__
 
-        sub (*@args, TinyCC :$tcc) {
+        sub (|args, TinyCC :$tcc) {
+            fail "Arguments { args.gist } do not match signature { $sig.gist }"
+                unless args ~~ $sig;
+
             my \CLEANUP = not $tcc // $*TINYCC;
             my \tcc = $tcc // $*TINYCC // TinyCC.new;
             LEAVE { tcc.discard if CLEANUP }
 
             my $rv := cval($rtype);
-            tcc.define(ARGS => cargs(@args).join(', '));
+            tcc.define(ARGS => cargs(args.list).join(', '));
             tcc.declare(:$rv);
             tcc.compile(CODE).run;
             rv($rv);
@@ -56,12 +62,9 @@ sub tccbind(Ptr $fp, Signature $sig) is export {
 proto sub tccinvoke(Ptr $fp, |c) is export {*}
 
 multi sub tccinvoke(Ptr $fp, Signature $sig, Capture $args, TinyCC :$tcc) {
-    fail "Arguments { $args.gist } do not match signature { $sig.gist }"
-        unless $args ~~ $sig;
-
-    tccinvoke($fp, $sig, |$args, :$tcc);
+    tccbind($fp, $sig).(|$args, :$tcc);
 }
 
 multi sub tccinvoke(Ptr $fp, Signature $sig, *@args, TinyCC :$tcc) {
-    tccbind($fp, $sig).(@args, :$tcc);
+    tccbind($fp, $sig).(|@args, :$tcc);
 }

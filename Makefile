@@ -15,7 +15,7 @@ BC = blib/TCC.pm6.moarvm \
 
 export PERL6LIB = blib
 
-tcc: blib/TCC.pm6.moarvm
+boot: blib/TinyCC/Bootstrap.pm6.moarvm
 
 bc: $(BC)
 

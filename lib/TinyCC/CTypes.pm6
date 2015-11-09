@@ -1,3 +1,6 @@
+# Copyright 2015 cygx <cygx@cpan.org>
+# Distributed under the Boost Software License, Version 1.0
+
 use nqp;
 
 sub csizeof(\value) is export { value.?CSIZE // nqp::nativecallsizeof(value) }
@@ -5,6 +8,8 @@ sub csizeof(\value) is export { value.?CSIZE // nqp::nativecallsizeof(value) }
 my class CPtr { ... }
 my class CArray { ... }
 my class CScalarRef { ... }
+
+my class cvoid is repr<Uninstantiable> is export {}
 
 my role Typed[::T] { method of { T } }
 
@@ -202,6 +207,7 @@ my constant &cuint64 = UINTSUBMAP<64>;
 my class cptr is repr<CPointer> is export {
     method Int { nqp::unbox_i(self) }
     method perl { "\&cptr(0x{ self.Int.base(16).lc })" }
+    method Str { self.perl }
 
     multi method to(cptr:D: Mu:U \type) {
         CPtr.new(value => self) but Typed[type];
@@ -212,7 +218,16 @@ my class cptr is repr<CPointer> is export {
     }
 }
 
-proto cptr($) is export {*}
+my constant PTRSIZE = csizeof cptr;
+
+my constant cintptr is export =  INTTYPEMAP{ PTRSIZE * 8 };
+my constant cuintptr is export = UINTTYPEMAP{ PTRSIZE * 8 };
+my constant &cintptr =  INTSUBMAP{ PTRSIZE * 8 };
+my constant &cuintptr = UINTSUBMAP{ PTRSIZE * 8 };
+
+my class RawPointerArray is repr<CArray> is array_type(cuintptr) { ... }
+
+proto cptr(*@) is export {*}
 multi cptr(Int:D \address) { nqp::box_i(address, cptr) }
 multi cptr(Cool:D \address where .Numeric == .Int) {
     nqp::box_i(address.Int, cptr);
@@ -220,13 +235,20 @@ multi cptr(Cool:D \address where .Numeric == .Int) {
 multi cptr(CPtr:D \ptr) { ptr.raw }
 multi cptr(CArray:D \array) { array.rawptr }
 multi cptr(Mu:U \type) { cptr.to(type) }
+multi cptr(List $list) { RawPointerArray.from($list) }
+multi cptr(*@values) { &cptr(@values.List) }
 
-my constant PTRSIZE = csizeof cptr;
+my class RawPointerArray is RawArray {
+    also does Positional[cptr];
 
-my constant cintptr is export =  INTTYPEMAP{ PTRSIZE * 8 };
-my constant cuintptr is export = UINTTYPEMAP{ PTRSIZE * 8 };
-my constant &cintptr =  INTSUBMAP{ PTRSIZE * 8 };
-my constant &cuintptr = UINTSUBMAP{ PTRSIZE * 8 };
+    method AT-POS(uint \pos) {
+        nqp::box_i(nqp::box_i(nqp::atpos_i(self, pos), cptr), cptr);
+    }
+
+    method ASSIGN-POS(uint \pos, \value) {
+        nqp::bindpos_i(self, pos, nqp::unbox_i(value));
+    }
+}
 
 my class CScalarRef {
     has $.value;
@@ -300,6 +322,7 @@ my class CArray does Iterable {
         when cullong { RawULLongArray }
         when cfloat  { RawFloatArray }
         when cdouble { RawDoubleArray }
+        when cptr    { RawPointerArray }
         default { die "CArray does not support type { .^name }" }
     }
 }
@@ -331,6 +354,25 @@ my class CPtr {
         }
     }
 }
+
+proto cnativetype(Mu:U) is export {*}
+multi cnativetype(Int $ where cchar) { 'char' }
+multi cnativetype(Int $ where cshort) { 'short' }
+multi cnativetype(Int $ where cint) { 'int' }
+multi cnativetype(Int $ where clong) { 'long' }
+multi cnativetype(Int $ where cllong) { 'longlong' }
+multi cnativetype(Int $ where cuchar) { 'uchar' }
+multi cnativetype(Int $ where cushort) { 'ushort' }
+multi cnativetype(Int $ where cuint) { 'uint' }
+multi cnativetype(Int $ where culong) { 'ulong' }
+multi cnativetype(Int $ where cullong) { 'ulonglong' }
+multi cnativetype(Num $ where cfloat) { 'float' }
+multi cnativetype(Num $ where cdouble) { 'double' }
+multi cnativetype(Blob) { 'vmarray' }
+multi cnativetype(Mu $ where nqp::decont($_) =:= Mu) { 'void' }
+multi cnativetype(Mu $ where .REPR eq 'CPointer') { 'cpointer' }
+multi cnativetype(Mu $ where .REPR eq 'VMArray') { 'vmarray' }
+multi cnativetype(Mu $ where .REPR eq 'Uninstantiable') { 'void' }
 
 sub EXPORT {
     BEGIN Map.new(
