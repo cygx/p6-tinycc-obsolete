@@ -355,6 +355,23 @@ my class CPtr {
     }
 }
 
+proto ctype(Mu:U) is export {*}
+multi ctype(Int $ where cchar) { 'signed char' }
+multi ctype(Int $ where cshort) { 'short' }
+multi ctype(Int $ where cint) { 'int' }
+multi ctype(Int $ where clong) { 'long' }
+multi ctype(Int $ where cllong) { 'long long' }
+multi ctype(Int $ where cuchar) { 'unsigned char' }
+multi ctype(Int $ where cushort) { 'unsigned short' }
+multi ctype(Int $ where cuint) { 'unsigned' }
+multi ctype(Int $ where culong) { 'unsigned long' }
+multi ctype(Int $ where cullong) { 'unsigned long long' }
+multi ctype(Num $ where cfloat) { 'float' }
+multi ctype(Num $ where cdouble) { 'double' }
+multi ctype(Blob) { 'char *' }
+multi ctype(Mu $ where .REPR eq 'CPointer') { 'void*' }
+multi ctype(Mu $ where .REPR eq 'VMArray') { 'void*' } # FIXME?
+
 proto cnativetype(Mu:U) is export {*}
 multi cnativetype(Int $ where cchar) { 'char' }
 multi cnativetype(Int $ where cshort) { 'short' }
