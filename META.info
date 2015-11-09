@@ -5,14 +5,14 @@
     "author"      : "cygx <cygx@cpan.org>",
     "source-url"  : "git://github.com/cygx/p6-tinycc.git",
     "provides"    : {
-        "TCC"                : "lib/TCC.pm6",
         "TinyCC"             : "lib/TinyCC.pm6",
-        "TinyCC::Bootstrap"  : "lib/TinyCC/Bootstrap.pm6",
+        "TinyCC::API"        : "lib/TinyCC/API.pm6",
         "TinyCC::CCall"      : "lib/TinyCC/CCall.pm6",
         "TinyCC::CFunc"      : "lib/TinyCC/CFunc.pm6",
         "TinyCC::CSignature" : "lib/TinyCC/CSignature.pm6",
         "TinyCC::CTypes"     : "lib/TinyCC/CTypes.pm6",
         "TinyCC::Eval"       : "lib/TinyCC/Eval.pm6",
+        "TinyCC::NC"         : "lib/TinyCC/NC.pm6",
         "TinyCC::Lib::C"     : "lib/TinyCC/Lib/C.pm6"
     },
     "depends"     : [ ],

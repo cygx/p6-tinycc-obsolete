@@ -6,7 +6,14 @@ use TinyCC::NC;
 
 unit class TinyCC::API;
 
-my constant TCCState = cptr;
+my class TCCState is repr<CPointer> {
+    use nqp;
+    method new($value) { nqp::box_i(nqp::unbox_i($value), TCCState) }
+    method Int { nqp::unbox_i(self) }
+    method gist { "TCCState|{ self.Int.base(16) }" }
+    method perl { "TCCState.new({ self.Int.base(16) })" }
+}
+
 my constant cstr = Blob;
 my constant cstrarray = cptr; # FIXME
 my constant ccallback = cptr; # FIXME

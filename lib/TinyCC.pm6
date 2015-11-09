@@ -1,8 +1,7 @@
 # Copyright 2015 cygx <cygx@cpan.org>
 # Distributed under the Boost Software License, Version 1.0
 
-use TinyCC::NC;
-use TinyCC::Types;
+use TinyCC::API;
 
 my enum  <LOAD SET DEF INC TARGET DECL COMP RELOC DONE>;
 my constant TARGETS = <_ MEM EXE DLL OBJ PRE>;
@@ -32,15 +31,6 @@ my class X::TinyCC::WrongTarget is X::TinyCC {
 my class X::TinyCC::FailedCall is X::TinyCC {
     has $.call;
     method message { "The call to tcc_$!call\() failed" }
-}
-
-use MONKEY-TYPING;
-augment class TCCState {
-    use nqp;
-    method new($value) { nqp::box_i(nqp::unbox_i($value), TCCState) }
-    method Numeric { nqp::unbox_i(self) }
-    method gist { "TCCState|{ self.Numeric.base(16) }" }
-    method perl { "TCCState.new({ self.Numeric.base(16) })" }
 }
 
 class TinyCC {
