@@ -4,44 +4,41 @@
 use v6;
 use nqp;
 
-my class Callsite is repr<NativeCall> {}
-my class void is repr<Uninstantiable> {}
+# -- core messages
+proto csize(Mu $_, *%_) is export { .?CSIZE(|%_) // {*} }
+proto ctypeclass(Mu $_, *%_) is export { .?CTYPECLASS(|%_) // {*} }
+
+proto cunbox(Mu:D $_, *%_) is export { .?CUNBOX(|%_) // {*} }
+proto crawptr(Mu:D $_, *%_) is export { .?CRAWPTR(|%_) // {*} }
+proto ceval(Mu:D $_, *%_) is export { .?CEVAL(|%_) // {*} }
+
+proto cdecl(Mu:U $_, Str $name = '', *%_) is export {
+    .?CDECL($name, |%_) // {*} }
+proto crawarraytype(Mu:U $_, *%_) is export { .?CRAWARRAYTYPE(|%_) // {*} }
+proto cvalue(Mu:U $_, $value, *%_) is export { .?CVALUE($value, |%_) // {*} }
+proto carray(Mu:U $_, *@_, *%_) is export { .?CARRAY(@_, |%_) // {*} }
+
+# -- some forward-declarations
+my class RawPtr is repr<CPointer> { ... }
 my class ScalarRef { ... }
-my class VMPtr is repr<CPointer> {
+
+# -- a dumb pointer
+my constant cvoidptr is export = RawPtr;
+my class RawPtr {
     method new(Mu \address) { nqp::box_i(nqp::unbox_i(address), self) }
-    method from(Mu \obj) { nqp::nativecallcast(VMPtr, VMPtr, nqp::decont(obj)) }
-    method Int { nqp::unbox_i(self) }
-    method gist { "VMPtr|{ nqp::unbox_i(self) }" }
-    method perl { "VMPtr.from({ nqp::unbox_i(self) })" }
+    method Numeric { nqp::unbox_i(self) }
+    method Int { +self }
+    method gist { "ptr|{ +self }" }
+    method perl { "RawPtr.from({ +self })" }
 }
 
-my constant cvoidptr is export = VMPtr;
-
-proto csizeof(Mu \obj) is export { obj.?CSIZEOF // nqp::nativecallsizeof(obj) }
-proto ctypeid(Mu \obj) is export { obj.?CTYPEID // {*} }
-proto ctype(Mu \obj, *%) is export { obj.?CTYPE // {*} }
-proto cunbox(Mu \value) is export { value.?CUNBOX // {*} }
-
-proto carraytype(Mu) is export {*}
-
-proto cpointer(Mu:U \T, $value, *%) is export {*}
-proto carray(Mu:U \T, *@values, *%) is export {*}
-proto cval(Mu:U \T, $value, *%) is export {*}
-
-proto cbind(Str $name, Signature $sig, *%) is export {*}
-proto cinvoke(Str $name, Signature $sig, *@, *%) is export {*}
-
+# -- some constants
 my constant CHAR_BIT = 8;
-my constant PTRSIZE = nqp::nativecallsizeof(VMPtr);
+my constant PTRSIZE = nqp::nativecallsizeof(RawPtr);
 my constant PTRBITS = CHAR_BIT * PTRSIZE;
 
-my native cintptr is Int is nativesize(PTRBITS) is repr<P6int> is export {}
-my native cuintptr is Int is nativesize(PTRBITS) is unsigned is repr<P6int>
-    is export {}
-# -- no need to define array types: dispatches to fixed-sized types
-
 my constant INTMAP = Map.new(
-    map { CHAR_BIT * nqp::nativecallsizeof($_) => .HOW.name($_) },
+    map { CHAR_BIT * nqp::nativecallsizeof($_) => .^name },
         my native longlong is repr<P6int> is ctype<longlong> {},
         my native long is repr<P6int> is ctype<long> {},
         my native int is repr<P6int> is ctype<int> {},
@@ -49,11 +46,13 @@ my constant INTMAP = Map.new(
         my native char is repr<P6int> is ctype<char> {});
 
 my constant NUMMAP = Map.new(
-    map { CHAR_BIT * nqp::nativecallsizeof($_) => .HOW.name($_) },
+    map { CHAR_BIT * nqp::nativecallsizeof($_) => .^name },
 #        my native longdouble is repr<P6num> is ctype<longdouble> {},
         my native double is repr<P6num> is ctype<double> {},
         my native float is repr<P6num> is ctype<float> {});
 
+
+# -- some subs useful for what comes next
 sub ni($_, $size) {
     .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size
         && !.HOW.unsigned($_);
@@ -68,6 +67,7 @@ sub nn($_, $size) {
     .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size;
 }
 
+# -- subsets useful for matching native types
 my subset CChar of Int is export where ni $_, nqp::const::C_TYPE_CHAR;
 my subset CShort of Int is export where ni $_, nqp::const::C_TYPE_SHORT;
 my subset CInt of Int is export where ni $_, nqp::const::C_TYPE_INT;
@@ -108,135 +108,127 @@ my subset CPointer of Mu is export where .REPR eq 'CPointer';
 my subset CArray of Mu is export where .REPR eq 'CArray';
 my subset VMArray of Mu is export where .REPR eq 'VMArray';
 
-multi ctypeid(CChar) { 'char' }
-multi ctypeid(CShort) { 'short' }
-multi ctypeid(CInt) { 'int' }
-multi ctypeid(CLong) { 'long' }
-multi ctypeid(CLLong) { 'longlong' }
+# -- type classes
+multi ctypeclass(CChar) { 'char' }
+multi ctypeclass(CShort) { 'short' }
+multi ctypeclass(CInt) { 'int' }
+multi ctypeclass(CLong) { 'long' }
+multi ctypeclass(CLLong) { 'longlong' }
 
-multi ctypeid(CUChar) { 'uchar' }
-multi ctypeid(CUShort) { 'ushort' }
-multi ctypeid(CUInt) { 'uint' }
-multi ctypeid(CULong) { 'ulong' }
-multi ctypeid(CULLong) { 'ulonglong' }
+multi ctypeclass(CUChar) { 'uchar' }
+multi ctypeclass(CUShort) { 'ushort' }
+multi ctypeclass(CUInt) { 'uint' }
+multi ctypeclass(CULong) { 'ulong' }
+multi ctypeclass(CULLong) { 'ulonglong' }
 
-multi ctypeid(CInt8) { BEGIN INTMAP<8> // Str }
-multi ctypeid(CInt16) { BEGIN INTMAP<16> // Str }
-multi ctypeid(CInt32) { BEGIN INTMAP<32> // Str }
-multi ctypeid(CInt64) { BEGIN INTMAP<64> // Str }
-multi ctypeid(CInt128) { BEGIN INTMAP<128> // Str }
+multi ctypeclass(CInt8) { BEGIN INTMAP<8> // Str }
+multi ctypeclass(CInt16) { BEGIN INTMAP<16> // Str }
+multi ctypeclass(CInt32) { BEGIN INTMAP<32> // Str }
+multi ctypeclass(CInt64) { BEGIN INTMAP<64> // Str }
+multi ctypeclass(CInt128) { BEGIN INTMAP<128> // Str }
 # -- dispatches to fixed-sized types
-# multi ctypeid(CIntPtr) { BEGIN INTMAP{PTRBITS} // Str }
+# multi ctypeclass(CIntPtr) { BEGIN INTMAP{PTRBITS} // Str }
 
-multi ctypeid(CIntX $_) {
+multi ctypeclass(CIntX $_) {
     INTMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str;
 }
 
-multi ctypeid(CUInt8) { BEGIN INTMAP<8> // Str andthen "u$_" }
-multi ctypeid(CUInt16) { BEGIN INTMAP<16> // Str andthen "u$_" }
-multi ctypeid(CUInt32) { BEGIN INTMAP<32> // Str andthen "u$_" }
-multi ctypeid(CUInt64) { BEGIN INTMAP<64> // Str andthen "u$_" }
-multi ctypeid(CUInt128) { BEGIN INTMAP<128> // Str andthen "u$_" }
+multi ctypeclass(CUInt8) { BEGIN INTMAP<8> // Str andthen "u$_" }
+multi ctypeclass(CUInt16) { BEGIN INTMAP<16> // Str andthen "u$_" }
+multi ctypeclass(CUInt32) { BEGIN INTMAP<32> // Str andthen "u$_" }
+multi ctypeclass(CUInt64) { BEGIN INTMAP<64> // Str andthen "u$_" }
+multi ctypeclass(CUInt128) { BEGIN INTMAP<128> // Str andthen "u$_" }
 # -- dispatches to fixed-sized types
-# multi ctypeid(CUIntPtr) { BEGIN INTMAP{PTRBITS} // Str andthen "u$_" }
+# multi ctypeclass(CUIntPtr) { BEGIN INTMAP{PTRBITS} // Str andthen "u$_" }
 
-multi ctypeid(CUIntX $_) {
+multi ctypeclass(CUIntX $_) {
     (INTMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str) andthen "u$_";
 }
 
-multi ctypeid(CFloat) { 'float' }
-multi ctypeid(CDouble) { 'double' }
-multi ctypeid(CLDouble) { 'longdouble' }
+multi ctypeclass(CFloat) { 'float' }
+multi ctypeclass(CDouble) { 'double' }
+multi ctypeclass(CLDouble) { 'longdouble' }
 
-multi ctypeid(CFloat32) { BEGIN NUMMAP<32> // Str }
-multi ctypeid(CFloat64) { BEGIN NUMMAP<64> // Str }
+multi ctypeclass(CFloat32) { BEGIN NUMMAP<32> // Str }
+multi ctypeclass(CFloat64) { BEGIN NUMMAP<64> // Str }
 
-multi ctypeid(CFloatX $_) {
+multi ctypeclass(CFloatX $_) {
     NUMMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str;
 }
 
-multi ctypeid(CPointer) { 'cpointer' }
-multi ctypeid(CArray) { 'carray' }
-multi ctypeid(VMArray) { 'vmarray' }
+multi ctypeclass(CPointer) { 'cpointer' }
+multi ctypeclass(CArray) { 'carray' }
+multi ctypeclass(VMArray) { 'vmarray' }
 
-multi ctypeid(Blob) { 'vmarray' }
-multi ctypeid(Str) { 'vmarray' } # -- unboxes to Blob
+multi ctypeclass(Blob) { 'vmarray' }
+multi ctypeclass(Str) { 'vmarray' } # -- unboxes to Blob
 
-multi ctypeid(Mu $_) { fail }
+multi ctypeclass(Mu $_) { fail }
 
+# -- unboxing
 multi cunbox(Str \value) { "{value}\0".encode }
-multi cunbox(Mu \value) { value }
 
-multi carray(Mu:U \T, *@values) {
-    my uint $n = +@values;
-    my $raw := carraytype(T).new;
-    my $boxed := $raw.box($n);
-    while ($n--) { $raw[$n] = @values[$n] }
-    $boxed;
+# -- numeric types
+my native cchar is Int is ctype<char> is repr<P6int> is export {}
+my native cshort is Int is ctype<short> is repr<P6int> is export {}
+my native cint is Int is ctype<int> is repr<P6int> is export {}
+my native clong is Int is ctype<long> is repr<P6int> is export {}
+my native cllong is Int is ctype<longlong> is repr<P6int> is export {}
+
+my native cuchar is Int is ctype<char> is unsigned is repr<P6int> is export {}
+my native cushort is Int is ctype<short> is unsigned is repr<P6int> is export {}
+my native cuint is Int is ctype<int> is unsigned is repr<P6int> is export {}
+my native culong is Int is ctype<long> is unsigned is repr<P6int> is export {}
+my native cullong is Int is ctype<longlong> is unsigned is repr<P6int>
+    is export {}
+
+my native cint8 is Int is nativesize(8) is repr<P6int> is export {}
+my native cint16 is Int is nativesize(16) is repr<P6int> is export {}
+my native cint32 is Int is nativesize(32) is repr<P6int> is export {}
+my native cint64 is Int is nativesize(64) is repr<P6int> is export {}
+# my native cint128 is Int is nativesize(128) is repr<P6int> is export {}
+my native cintptr is Int is nativesize(PTRBITS) is repr<P6int> is export {}
+
+my native cuint8 is Int is nativesize(8) is unsigned is repr<P6int>
+    is export {}
+my native cuint16 is Int is nativesize(16) is unsigned is repr<P6int>
+    is export {}
+my native cuint32 is Int is nativesize(32) is unsigned is repr<P6int>
+    is export {}
+my native cuint64 is Int is nativesize(64) is unsigned is repr<P6int>
+    is export {}
+# my native cuint128 is Int is nativesize(128) is unsigned is repr<P6int>
+#     is export {}
+my native cuintptr is Int is nativesize(PTRBITS) is unsigned is repr<P6int>
+    is export {}
+
+my native cfloat is Num is ctype<float> is repr<P6num> is export {}
+my native cdouble is Num is ctype<double>  is repr<P6num> is export {}
+# my native cldouble is Num is ctype<longdouble>  is repr<P6num>
+#     is export {}
+
+my native cfloat32 is Num is nativesize(32) is repr<P6num> is export {}
+my native cfloat64 is Num is nativesize(64) is repr<P6num> is export {}
+
+# -- a smart pointer
+my class void is repr<Uninstantiable> {
+    method CDECL($name) { $name ?? "void $name" !! 'void' }
 }
 
-multi cval(Mu:U \T, $value, *%) {
-    my $array := carraytype(T).new;
-    $array[0] = $value;
-    cpointer(T, $array);
-}
-
-multi cbind(Str $name, Signature $sig, Str :$lib) {
-    my $argtypes := nqp::list();
-    nqp::push($argtypes, nqp::hash('type', ctypeid(.type)))
-        for $sig.params.grep(*.positional);
-
-    # only necessary for Int?
-    my $rtype := do given $sig.returns {
-        when Int { Int }
-        when Num { Num }
-        default { $_ }
-    }
-
-    my $cs := nqp::create(Callsite);
-    nqp::buildnativecall(
-        $cs,
-        $lib // '',
-        $name,
-        '', # calling convention
-        $argtypes,
-        nqp::hash('type', ctypeid($sig.returns) // 'void'),
-    );
-
-    sub (|args) {
-        fail "Arguments { args.gist } do not match signature { $sig.gist }"
-            unless args ~~ $sig;
-
-        my $args := nqp::list();
-        nqp::push($args, cunbox($_))
-            for args.list;
-
-        nqp::nativecall($rtype, $cs, $args);
-    }
-}
-
-multi cinvoke(Str $name, Signature $sig, Capture $args, Str :$lib) {
-    cbind($name, $sig, :$lib).(|$args);
-}
-
-multi cinvoke(Str $name, Signature $sig, *@args, Str :$lib) {
-    cbind($name, $sig, :$lib).(|@args);
-}
-
-my role CPtr[::T = void] is export {
+my role BoxedPtr[::T = void] {
     has $.raw handles <Int>; # is box_target -- ???
 
-    method CSIZEOF { PTRSIZE }
-    method CTYPEID { 'cpointer' }
-    method CTYPE { "{ ctype(T) }*" }
+    method CSIZE { PTRSIZE }
+    method CTYPECLASS { 'cpointer' }
+    method CDECL($name) { cdecl(T, "*$name") }
+    method CEVAL { "({ cdecl($, '*') }){ +self }" }
     method CUNBOX { $!raw }
 
-    multi method from(Int \address) { self.new(raw => VMPtr.new(address)) }
-    multi method from(Mu \obj) { self.new(raw => VMPtr.from(obj)) }
-    method Numeric { self.Int }
-    method hex { "0x{ self.Int.base(16).lc }" }
-    method gist { "({ T.^name }*){ self.hex }" }
-    method to(Mu:U \type) { CPtr[type].new(:$!raw) }
+    multi method from(Int \address) { self.new(raw => RawPtr.new(address)) }
+    multi method from(Mu \obj) { self.new(raw => crawptr(obj)) }
+    method Numeric { +self }
+    method gist { self.CEVAL }
+    method to(Mu:U \type) { BoxedPtr[type].new(:$!raw) }
     method of { T }
 
     method lv is rw { ScalarRef.new(self) }
@@ -262,8 +254,7 @@ my role CPtr[::T = void] is export {
     }
 }
 
-multi cpointer(Mu:U \T, $value) { CPtr[T].from($value) }
-
+# -- a scalar reference
 my class ScalarRef {
     has $.ptr;
     has $.raw;
@@ -271,7 +262,7 @@ my class ScalarRef {
     method FETCH { $!raw.AT-POS(0) }
     method STORE(\value) { $!raw.ASSIGN-POS(0, value) }
 
-    method new(CPtr \ptr) {
+    method new(BoxedPtr \ptr) {
         once {
             nqp::loadbytecode('nqp.moarvm');
             EVAL q:to/__END__/, :lang<nqp>;
@@ -292,7 +283,7 @@ my class ScalarRef {
             __END__
         }
 
-        my \type = nqp::decont(carraytype(ptr.of));
+        my \type = nqp::decont(crawarraytype(ptr.of));
         my \raw = nqp::nativecallcast(type, type, nqp::decont(ptr.raw));
         my \ref = nqp::create(ScalarRef);
         nqp::bindattr(ref, ScalarRef, '$!raw', raw);
@@ -302,15 +293,16 @@ my class ScalarRef {
     }
 }
 
+# -- a boxed array
 my role BoxedArray[::T, UInt \elems] does Positional[T] {
     has $.raw handles <AT-POS ASSIGN-POS>;
 
-    method CSIZEOF { self.elems * csizeof(nqp::decont(T)) }
-    method CTYPEID { 'carray' }
-    method CTYPE { "{ ctype(T) }[{elems}]" }
+    method CSIZE { self.elems * csize(nqp::decont(T)) }
+    method CTYPCLASS { 'carray' }
+    method CDECL($name) { cdecl(T, $name ~ "[{ elems }]", |%_) }
     method CUNBOX { $!raw }
 
-    method ptr { CPtr[T].from($!raw) }
+    method ptr { BoxedPtr[T].from($!raw) }
     method elems { elems }
 
     method iterator {
@@ -325,6 +317,7 @@ my role BoxedArray[::T, UInt \elems] does Positional[T] {
     }
 }
 
+# -- raw arrays
 my role RawArray[::T] {
     method box($raw: uint \elems) { BoxedArray[T, elems].new(:$raw) }
 }
@@ -339,143 +332,105 @@ my role FloatingArray[::T] does RawArray[T] {
     method ASSIGN-POS(uint \pos, \value) { nqp::bindpos_n(self, pos, value) }
 }
 
-
-my native cchar is Int is ctype<char> is repr<P6int> is export {}
 my class CCharArray is repr<CArray> is array_type(cchar)
     does IntegerArray[cchar] {}
-multi carraytype(CChar) { CCharArray }
+multi crawarraytype(CChar) { CCharArray }
 
-my native cshort is Int is ctype<short> is repr<P6int> is export {}
 my class CShortArray is repr<CArray> is array_type(cshort)
     does IntegerArray[cshort] {}
-multi carraytype(CShort) { CShortArray }
+multi crawarraytype(CShort) { CShortArray }
 
-my native cint is Int is ctype<int> is repr<P6int> is export {}
 my class CIntArray is repr<CArray> is array_type(cint)
     does IntegerArray[cint] {}
-multi carraytype(CInt) { CIntArray }
+multi crawarraytype(CInt) { CIntArray }
 
-my native clong is Int is ctype<long> is repr<P6int> is export {}
 my class CLongArray is repr<CArray> is array_type(clong)
     does IntegerArray[clong] {}
-multi carraytype(CLong) { CLongArray }
+multi crawarraytype(CLong) { CLongArray }
 
-my native cllong is Int is ctype<longlong> is repr<P6int> is export {}
 my class CLLongArray is repr<CArray> is array_type(cllong)
     does IntegerArray[cllong] {}
-multi carraytype(CLLong) { CLLongArray }
+multi crawarraytype(CLLong) { CLLongArray }
 
-
-my native cuchar is Int is ctype<char> is unsigned is repr<P6int> is export {}
 my class CUCharArray is repr<CArray> is array_type(cuchar)
     does IntegerArray[cuchar] {}
-multi carraytype(CUChar) { CUCharArray }
+multi crawarraytype(CUChar) { CUCharArray }
 
-my native cushort is Int is ctype<short> is unsigned is repr<P6int> is export {}
 my class CUShortArray is repr<CArray> is array_type(cushort)
     does IntegerArray[cushort] {}
-multi carraytype(CUShort) { CUShortArray }
+multi crawarraytype(CUShort) { CUShortArray }
 
-my native cuint is Int is ctype<int> is unsigned is repr<P6int> is export {}
 my class CUIntArray is repr<CArray> is array_type(cuint)
     does IntegerArray[cuint] {}
-multi carraytype(CUInt) { CUIntArray }
+multi crawarraytype(CUInt) { CUIntArray }
 
-my native culong is Int is ctype<long> is unsigned is repr<P6int> is export {}
 my class CULongArray is repr<CArray> is array_type(culong)
     does IntegerArray[clong] {}
-multi carraytype(CULong) { CULongArray }
+multi crawarraytype(CULong) { CULongArray }
 
-my native cullong is Int is ctype<longlong> is unsigned is repr<P6int>
-    is export {}
 my class CULLongArray is repr<CArray> is array_type(cullong)
     does IntegerArray[cullong] {}
-multi carraytype(CULLong) { CULLongArray }
+multi crawarraytype(CULLong) { CULLongArray }
 
-
-my native cint8 is Int is nativesize(8) is repr<P6int> is export {}
 my class CInt8Array is repr<CArray> is array_type(cint8)
     does IntegerArray[cint8] {}
-multi carraytype(CInt8) { CInt8Array }
+multi crawarraytype(CInt8) { CInt8Array }
 
-my native cint16 is Int is nativesize(16) is repr<P6int> is export {}
 my class CInt16Array is repr<CArray> is array_type(cint16)
     does IntegerArray[cint16] {}
-multi carraytype(CInt16) { CInt16Array }
+multi crawarraytype(CInt16) { CInt16Array }
 
-my native cint32 is Int is nativesize(32) is repr<P6int> is export {}
 my class CInt32Array is repr<CArray> is array_type(cint32)
     does IntegerArray[cint32] {}
-multi carraytype(CInt32) { CInt32Array }
+multi crawarraytype(CInt32) { CInt32Array }
 
-my native cint64 is Int is nativesize(64) is repr<P6int> is export {}
 my class CInt64Array is repr<CArray> is array_type(cint64)
     does IntegerArray[cint64] {}
-multi carraytype(CInt64) { CInt64Array }
+multi crawarraytype(CInt64) { CInt64Array }
 
-# my native cint128 is Int is nativesize(128) is repr<P6int> is export {}
 # my class CInt128Array is repr<CArray> is array_type(cint128)
 #     does IntegerArray[cint128] {}
-# multi carraytype(CInt128) { CInt128Array }
+# multi crawarraytype(CInt128) { CInt128Array }
 
-
-my native cuint8 is Int is nativesize(8) is unsigned is repr<P6int>
-    is export {}
 my class CUInt8Array is repr<CArray> is array_type(cuint8)
     does IntegerArray[cuint8] {}
-multi carraytype(CUInt8) { CUInt8Array }
+multi crawarraytype(CUInt8) { CUInt8Array }
 
-my native cuint16 is Int is nativesize(16) is unsigned is repr<P6int>
-    is export {}
 my class CUInt16Array is repr<CArray> is array_type(cuint16)
     does IntegerArray[cuint16] {}
-multi carraytype(CUInt16) { CUInt16Array }
+multi crawarraytype(CUInt16) { CUInt16Array }
 
-my native cuint32 is Int is nativesize(32) is unsigned is repr<P6int>
-    is export {}
 my class CUInt32Array is repr<CArray> is array_type(cuint32)
     does IntegerArray[cuint32] {}
-multi carraytype(CUInt32) { CUInt32Array }
+multi crawarraytype(CUInt32) { CUInt32Array }
 
-my native cuint64 is Int is nativesize(64) is unsigned is repr<P6int>
-    is export {}
 my class CUInt64Array is repr<CArray> is array_type(cuint64)
     does IntegerArray[cuint64] {}
-multi carraytype(CUInt64) { CUInt64Array }
+multi crawarraytype(CUInt64) { CUInt64Array }
 
-# my native cuint128 is Int is nativesize(128) is unsigned is repr<P6int>
-#     is export {}
 # my class CUInt128Array is repr<CArray> is array_type(cuint128)
 #     does IntegerArray[cuint128] {}
-# multi carraytype(CUInt128) { CUInt128Array }
+# multi crawarraytype(CUInt128) { CUInt128Array }
 
-
-my native cfloat is Num is ctype<float> is repr<P6num> is export {}
 my class CFloatArray is repr<CArray> is array_type(cfloat)
     does FloatingArray[cfloat] {}
-multi carraytype(CFloat) { CFloatArray }
+multi crawarraytype(CFloat) { CFloatArray }
 
-my native cdouble is Num is ctype<double>  is repr<P6num> is export {}
 my class CDoubleArray is repr<CArray> is array_type(cdouble)
     does FloatingArray[cdouble] {}
-multi carraytype(CDouble) { CDoubleArray }
+multi crawarraytype(CDouble) { CDoubleArray }
 
-# my native cldouble is Num is ctype<longdouble>  is repr<P6num>
-#     is export {}
 # my class CLDoubleArray is repr<CArray> is array_type(cldouble)
 #     does FloatingArray[cldouble] {}
-# multi carraytype(CLDouble) { CLDoubleArray }
+# multi crawarraytype(CLDouble) { CLDoubleArray }
 
-
-my native cfloat32 is Num is nativesize(32) is repr<P6num> is export {}
 my class CFloat32Array is repr<CArray> is array_type(cfloat32)
     does FloatingArray[cfloat32] {}
-multi carraytype(CFloat32) { CFloat32Array }
+multi crawarraytype(CFloat32) { CFloat32Array }
 
-my native cfloat64 is Num is nativesize(64) is repr<P6num> is export {}
 my class CFloat64Array is repr<CArray> is array_type(cfloat64)
     does FloatingArray[cfloat64] {}
-multi carraytype(CFloat64) { CFloat64Array }
+multi crawarraytype(CFloat64) { CFloat64Array }
 
 # -- preliminary helper functions
 # -- likely to change with future revisions
@@ -484,16 +439,8 @@ sub cstrings(*@values, :$enc = 'utf8', :$stage) is export {
     Blob[cuintptr].new(|@values.map({
         my $blob := "$_\0".encode($enc);
         .push($blob) with $stage;
-        VMPtr.from($blob)
+        RawPtr.from($blob)
     }), 0);
-}
-
-sub ceval(*@values) is export {
-    @values.map: {
-        when Numeric { ~.Numeric }
-        when CPointer { "(void*){ nqp::unbox_i($_ // 0) }" }
-        default { die "Mapping of value { .gist } not known" }
-    }
 }
 
 my class CParameter {
@@ -513,9 +460,9 @@ my class CSignature {
 
     method from(Signature $sig) {
         self.bless(
-            returns => ctype($sig.returns),
+            returns => cdecl($sig.returns),
             params => $sig.params.grep(*.positional).map({
-                CParameter.new(name => .name, type => ctype(.type));
+                CParameter.new(name => .name, type => cdecl(.type));
             }),
         );
     }
@@ -525,4 +472,81 @@ my class CSignature {
     }
 }
 
-sub csignature(Signature $s) is export { CSignature.frm($s) }
+sub csignature(Signature $s) is export { CSignature.from($s) }
+
+# -- core functionality
+proto cbind(Mu $, Signature $sig, *%) is export {*}
+proto cinvoke(Mu $, Signature $sig, *@, *%) is export {*}
+
+my class Callsite is repr<NativeCall> {}
+
+multi cbind(Str $name, Signature $sig, Str :$lib) {
+    my $argtypes := nqp::list();
+    nqp::push($argtypes, nqp::hash('type', ctypeclass(.type)))
+        for $sig.params.grep(*.positional);
+
+    # only necessary for Int?
+    my $rtype := do given $sig.returns {
+        when Int { Int }
+        when Num { Num }
+        default { $_ }
+    }
+
+    my $cs := nqp::create(Callsite);
+    nqp::buildnativecall(
+        $cs,
+        $lib // '',
+        $name,
+        '', # calling convention
+        $argtypes,
+        nqp::hash('type', ctypeclass($sig.returns) // 'void'),
+    );
+
+    sub (|args) {
+        fail "Arguments { args.gist } do not match signature { $sig.gist }"
+            unless args ~~ $sig;
+
+        my $args := nqp::list();
+        nqp::push($args, cunbox($_))
+            for args.list;
+
+        nqp::nativecall($rtype, $cs, $args);
+    }
+}
+
+multi cinvoke(Str $name, Signature $sig, Capture $args, Str :$lib) {
+    cbind($name, $sig, :$lib).(|$args);
+}
+
+multi cinvoke(Str $name, Signature $sig, *@args, Str :$lib) {
+    cbind($name, $sig, :$lib).(|@args);
+}
+
+# -- default responses
+multi csize(Mu $_, *%) { nqp::nativecallsizeof($_) }
+multi ctypeclass(Mu $_, *%) { fail .^name }
+
+multi cunbox(Mu:D $_, *%) { $_ }
+multi crawptr(Mu:D $_, *%) {
+    nqp::nativecallcast(RawPtr, RawPtr, nqp::decont($_)) }
+
+multi ceval(Numeric $_, *%) { .Str }
+multi ceval(CPointer $_, *%) { "(void*){ nqp::unbox_i($_) }" }
+multi ceval(Mu $_, *%) { fail .^name }
+
+multi cdecl(Mu:U $_, Str $name?, *%) { fail .^name }
+multi crawarraytype(Mu:U $_, *%) { fail .^name }
+
+multi cvalue(Mu:U $_, $value, *%_) {
+    my $array := crawarraytype($_, |%_).new;
+    $array[0] = $value;
+    BoxedPtr[$_].new(raw => crawptr($array, |%_));
+}
+
+multi carray(Mu:U $_, *@_, *%_) {
+    my uint $n = +@_;
+    my $raw := crawarraytype($_, |%_).new;
+    my $boxed := BoxedArray[$_, $n].new;
+    while ($n--) { $raw[$n] = @_[$n] }
+    $boxed;
+}

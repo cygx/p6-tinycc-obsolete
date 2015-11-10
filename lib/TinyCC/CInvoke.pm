@@ -1,12 +1,10 @@
 # Copyright 2015 cygx <cygx@cpan.org>
 # Distributed under the Boost Software License, Version 1.0
 
+use CTypes;
 use TinyCC;
-use TinyCC::Types;
 
-subset Ptr where .REPR eq 'CPointer';
-
-sub tccbind(Ptr $fp, Signature $sig) is export {
+multi cbind(CPointer $fp, Signature $sig, Bool :$tcc!) is export {
     my $address := +$fp;
     my $rtype := $sig.returns;
     if $rtype =:= Mu {
@@ -59,12 +57,11 @@ sub tccbind(Ptr $fp, Signature $sig) is export {
     }
 }
 
-proto sub tccinvoke(Ptr $fp, |c) is export {*}
-
-multi sub tccinvoke(Ptr $fp, Signature $sig, Capture $args, TinyCC :$tcc) {
-    tccbind($fp, $sig).(|$args, :$tcc);
+multi cinvoke(CPointer $fp, Signature $sig, Capture $args, Bool :$tcc!)
+    is export {
+    cbind($fp, $sig, :tcc).(|$args);
 }
 
-multi sub tccinvoke(Ptr $fp, Signature $sig, *@args, TinyCC :$tcc) {
-    tccbind($fp, $sig).(|@args, :$tcc);
+multi cinvoke(CPointer $fp, Signature $sig, *@args, Bool :$tcc!) is export {
+    cbind($fp, $sig, :tcc).(|@args);
 }
