@@ -163,8 +163,6 @@ multi ctypeclass(VMArray) { 'vmarray' }
 multi ctypeclass(Blob) { 'vmarray' }
 multi ctypeclass(Str) { 'vmarray' } # -- unboxes to Blob
 
-multi ctypeclass(Mu $_) { fail }
-
 # -- unboxing
 multi cunbox(Str \value) { "{value}\0".encode }
 
