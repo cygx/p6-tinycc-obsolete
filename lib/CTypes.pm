@@ -218,7 +218,7 @@ my role BoxedArray[::T, UInt \elems] does Positional[T] {
     has $.raw handles <AT-POS ASSIGN-POS>;
 
     method CSIZE { self.elems * csize(nqp::decont(T)) }
-    method CTYPCLASS { 'carray' }
+    method CTYPECLASS { 'carray' }
     method CDECL($name) { cdecl(T, $name ~ "[{ elems }]", |%_) }
     method CUNBOX { $!raw }
 
