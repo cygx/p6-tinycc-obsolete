@@ -11,7 +11,7 @@ my class TCCState is repr<CPointer> is cvoidptr {
 }
 
 my constant cptr = cvoidptr;
-my constant cstr = Blob;
+my constant cstr = Str;
 my constant cstrarray = Blob[cuintptr];
 my constant ccallback = cvoidptr;
 

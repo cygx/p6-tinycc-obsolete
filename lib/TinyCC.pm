@@ -34,8 +34,6 @@ my class X::TinyCC::FailedCall is X::TinyCC {
     method message { "The call to tcc_$!call\() failed" }
 }
 
-sub tocstr($_) { "$_\0".encode }
-
 class TinyCC {
                         # what happens on reuse:
     has $.state;        # always destroyed
@@ -289,7 +287,7 @@ class TinyCC {
     method !COMPILE {
         self!LOAD;
 
-        $!api.tcc_set_lib_path.($!state, tocstr($_))
+        $!api.tcc_set_lib_path.($!state, $_)
             with $!root || %*ENV<TCCROOT> || Nil;
 
         for %!settings<opts nostdinc I isystem nostdlib L l>:kv ->
@@ -333,7 +331,7 @@ class TinyCC {
         $!api.tcc_set_error_func.($!state, $!errpayload, $!errhandler)
             if defined $!errhandler;
 
-        $!api.tcc_define_symbol.($!state, tocstr(.key), tocstr(.value))
+        $!api.tcc_define_symbol.($!state, .key, .value.Str)
             for %!defs.pairs;
 
         X::TinyCC::FailedCall.new(:call<set_output_type>).fail
@@ -346,7 +344,7 @@ class TinyCC {
         }
 
         X::TinyCC::FailedCall.new(:call<compile_string>).fail
-            if $!api.tcc_compile_string.($!state, tocstr(@!code.join("\n"))) < 0;
+            if $!api.tcc_compile_string.($!state, @!code.join("\n")) < 0;
     }
 
     method !LOAD {

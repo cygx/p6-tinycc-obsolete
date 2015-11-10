@@ -17,13 +17,17 @@ my class VMPtr is repr<CPointer> {
 
 my constant cvoidptr is export = VMPtr;
 
-proto csizeof(Mu \obj) is export { obj.?CT-SIZEOF // nqp::nativecallsizeof(obj) }
-proto ctypeid(Mu \obj) is export { obj.?CT-TYPEID // {*} }
-proto ctype(Mu \obj, *%) is export { obj.?CT-TYPE // {*} }
+proto csizeof(Mu \obj) is export { obj.?CSIZEOF // nqp::nativecallsizeof(obj) }
+proto ctypeid(Mu \obj) is export { obj.?CTYPEID // {*} }
+proto ctype(Mu \obj, *%) is export { obj.?CTYPE // {*} }
+proto cunbox(Mu \value) is export { value.?CUNBOX // {*} }
+
 proto carraytype(Mu) is export {*}
+
 proto cpointer(Mu:U \T, $value, *%) is export {*}
 proto carray(Mu:U \T, *@values, *%) is export {*}
 proto cval(Mu:U \T, $value, *%) is export {*}
+
 proto cbind(Str $name, Signature $sig, *%) is export {*}
 proto cinvoke(Str $name, Signature $sig, *@, *%) is export {*}
 
@@ -102,7 +106,7 @@ my subset CFloatX of Num is export where nn $_, 0;
 
 my subset CPointer of Mu is export where .REPR eq 'CPointer';
 my subset CArray of Mu is export where .REPR eq 'CArray';
-my subset VMArray of Mu is export where .REPR eq 'VMArray' || .WHAT ~~ Blob;
+my subset VMArray of Mu is export where .REPR eq 'VMArray';
 
 multi ctypeid(CChar) { 'char' }
 multi ctypeid(CShort) { 'short' }
@@ -155,7 +159,13 @@ multi ctypeid(CPointer) { 'cpointer' }
 multi ctypeid(CArray) { 'carray' }
 multi ctypeid(VMArray) { 'vmarray' }
 
-multi ctypeid(Mu $_) { Str }
+multi ctypeid(Blob) { 'vmarray' }
+multi ctypeid(Str) { 'vmarray' } # -- unboxes to Blob
+
+multi ctypeid(Mu $_) { fail }
+
+multi cunbox(Str \value) { "{value}\0".encode }
+multi cunbox(Mu \value) { value }
 
 multi carray(Mu:U \T, *@values) {
     my uint $n = +@values;
@@ -198,7 +208,7 @@ multi cbind(Str $name, Signature $sig, Str :$lib) {
             unless args ~~ $sig;
 
         my $args := nqp::list();
-        nqp::push($args, .?CT-UNBOX // $_)
+        nqp::push($args, cunbox($_))
             for args.list;
 
         nqp::nativecall($rtype, $cs, $args);
@@ -216,10 +226,10 @@ multi cinvoke(Str $name, Signature $sig, *@args, Str :$lib) {
 my role CPtr[::T = void] is export {
     has $.raw handles <Int>; # is box_target -- ???
 
-    method CT-SIZEOF { PTRSIZE }
-    method CT-TYPEID { 'cpointer' }
-    method CT-TYPE { "{ ctype(T) }*" }
-    method CT-UNBOX { $!raw }
+    method CSIZEOF { PTRSIZE }
+    method CTYPEID { 'cpointer' }
+    method CTYPE { "{ ctype(T) }*" }
+    method CUNBOX { $!raw }
 
     multi method from(Int \address) { self.new(raw => VMPtr.new(address)) }
     multi method from(Mu \obj) { self.new(raw => VMPtr.from(obj)) }
@@ -295,10 +305,10 @@ my class ScalarRef {
 my role BoxedArray[::T, UInt \elems] does Positional[T] {
     has $.raw handles <AT-POS ASSIGN-POS>;
 
-    method CT-SIZEOF { self.elems * csizeof(nqp::decont(T)) }
-    method CT-TYPEID { 'carray' }
-    method CT-TYPE { "{ ctype(T) }[{elems}]" }
-    method CT-UNBOX { $!raw }
+    method CSIZEOF { self.elems * csizeof(nqp::decont(T)) }
+    method CTYPEID { 'carray' }
+    method CTYPE { "{ ctype(T) }[{elems}]" }
+    method CUNBOX { $!raw }
 
     method ptr { CPtr[T].from($!raw) }
     method elems { elems }
