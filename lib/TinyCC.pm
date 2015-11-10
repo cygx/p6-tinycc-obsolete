@@ -1,6 +1,7 @@
 # Copyright 2015 cygx <cygx@cpan.org>
 # Distributed under the Boost Software License, Version 1.0
 
+use CTypes;
 use TinyCC::API;
 
 my enum  <LOAD SET DEF INC TARGET DECL COMP RELOC DONE>;
@@ -32,6 +33,8 @@ my class X::TinyCC::FailedCall is X::TinyCC {
     has $.call;
     method message { "The call to tcc_$!call\() failed" }
 }
+
+sub tocstr($_) { "$_\0".encode }
 
 class TinyCC {
                         # what happens on reuse:
@@ -154,10 +157,9 @@ class TinyCC {
 
     multi method compile(Routine $r, Str $body) {
         my $name := $r.name;
-        my $sig := cparams($r.signature.params).join(', ');
-        my $type := ctype($r.signature.returns);
+        my $sig := csignature($r.signature);
         @!code.push: qq:to/__END__/;
-            $type $name\($sig) \{
+            { $sig.prototype } \{
             { $body.chomp.indent(4) }
             }
             __END__
@@ -176,7 +178,7 @@ class TinyCC {
 
         self!COMPILE;
         X::TinyCC::FailedCall.new(:call<relocate>).fail
-            if $!api<relocate>($!state, api.RELOCATE_AUTO) < 0;
+            if $!api.tcc_relocate.($!state, cvoidptr.new(1)) < 0;
 
         $!stage = RELOC;
         self;
@@ -187,16 +189,11 @@ class TinyCC {
         X::TinyCC::OutOfOrder.new(:action<lookup>, :$!stage).fail
             if $!stage != RELOC;
 
-        $!api<get_symbol>($!state, $name);
+        $!api.tcc_get_symbol.($!state, $name);
     }
 
     multi method lookup(Str $name, Mu:U $type) {
-        nc.cast-to-ptr-of($type, self.lookup($name));
-    }
-
-    multi method lookup(Str $name, Mu:U :$var!) is rw {
-        my $ptr := self.lookup($name);
-        nc.cast-to-array($var, $ptr).AT-POS(0);
+        self.lookup($name).to($type);
     }
 
     method run(*@args) {
@@ -207,7 +204,10 @@ class TinyCC {
             if $!target != 1;
 
         self!COMPILE;
-        my $rv = $!api<run>($!state, +@args, nc.array(Str, ~<<@args, Str));
+
+        my @stage;
+        my $rv = $!api.tcc_run.($!state, +@args, cstrings(@args));
+
         self!DELETE;
         $rv;
     }
@@ -221,7 +221,7 @@ class TinyCC {
 
         self!COMPILE;
         X::TinyCC::FailedCall.new(:call<output_file>).fail
-            if $!api<output_file>($!state, $path) < 0;
+            if $!api.tcc_output_file.($!state, $path) < 0;
 
         self!DELETE;
         self;
@@ -281,7 +281,7 @@ class TinyCC {
     }
 
     method !DELETE {
-        $!api<delete>($!state) if $!state;
+        $!api.tcc_delete.($!state) if $!state;
         $!state := Nil;
         $!stage = DONE;
     }
@@ -289,7 +289,8 @@ class TinyCC {
     method !COMPILE {
         self!LOAD;
 
-        $!api<set_lib_path>($!state, $_) with $!root || %*ENV<TCCROOT> || Nil;
+        $!api.tcc_set_lib_path.($!state, tocstr($_))
+            with $!root || %*ENV<TCCROOT> || Nil;
 
         for %!settings<opts nostdinc I isystem nostdlib L l>:kv ->
                 $opt, $values {
@@ -329,31 +330,33 @@ class TinyCC {
             }
         }
 
-        $!api<set_error_func>($!state, $!errpayload, $!errhandler)
+        $!api.tcc_set_error_func.($!state, $!errpayload, $!errhandler)
             if defined $!errhandler;
 
-        $!api<define_symbol>($!state, .key, ~.value)
+        $!api.tcc_define_symbol.($!state, tocstr(.key), tocstr(.value))
             for %!defs.pairs;
 
         X::TinyCC::FailedCall.new(:call<set_output_type>).fail
-            if $!api<set_output_type>($!state, $!target) < 0;
+            if $!api.tcc_set_output_type.($!state, $!target) < 0;
 
         for %!decls.pairs {
             X::TinyCC::FailedCall.new(:call<add_symbol>).fail
-                if $!api<add_symbol>($!state, .key, nc.cast-to-ptr(.value)) < 0;
+                if $!api.tcc_add_symbol.($!state, .key,
+                    cvoidptr.new(.value)) < 0;
         }
 
         X::TinyCC::FailedCall.new(:call<compile_string>).fail
-            if $!api<compile_string>($!state, @!code.join("\n")) < 0;
+            if $!api.tcc_compile_string.($!state, tocstr(@!code.join("\n"))) < 0;
     }
 
     method !LOAD {
         my @candidates = @!candidates || %*ENV<LIBTCC> || 'libtcc';
 
         for @candidates -> $lib {
-            with try api.new-state($lib) -> $state {
+            my $api = TinyCC::API.new($lib);
+            with try $api.?tcc_new.() -> $state {
                 $!state := $state;
-                $!api := api.load($lib);
+                $!api := $api;
                 return;
             }
         }
