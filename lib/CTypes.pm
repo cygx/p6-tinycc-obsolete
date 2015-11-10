@@ -4,7 +4,7 @@
 use v6;
 use nqp;
 
-# -- core messages
+# -- messages
 proto csize(Mu $_, *%_) is export { .?CSIZE(|%_) // {*} }
 proto ctypeclass(Mu $_, *%_) is export { .?CTYPECLASS(|%_) // {*} }
 
@@ -12,25 +12,21 @@ proto cunbox(Mu:D $_, *%_) is export { .?CUNBOX(|%_) // {*} }
 proto crawptr(Mu:D $_, *%_) is export { .?CRAWPTR(|%_) // {*} }
 proto ceval(Mu:D $_, *%_) is export { .?CEVAL(|%_) // {*} }
 
-proto cdecl(Mu:U $_, Str $name = '', *%_) is export {
-    .?CDECL($name, |%_) // {*} }
+proto cdecl(Mu:U $_, Str $name = '', *%_) is export { .?CDECL($name, |%_) // {*} }
 proto crawarraytype(Mu:U $_, *%_) is export { .?CRAWARRAYTYPE(|%_) // {*} }
 proto cvalue(Mu:U $_, $value, *%_) is export { .?CVALUE($value, |%_) // {*} }
 proto carray(Mu:U $_, *@_, *%_) is export { .?CARRAY(@_, |%_) // {*} }
 
-# -- some forward-declarations
-my class RawPtr is repr<CPointer> { ... }
-my class ScalarRef { ... }
-
 # -- a dumb pointer
-my constant cvoidptr is export = RawPtr;
-my class RawPtr {
+my class RawPtr is repr<CPointer> {
     method new(Mu \address) { nqp::box_i(nqp::unbox_i(address), self) }
     method Numeric { nqp::unbox_i(self) }
     method Int { +self }
     method gist { "ptr|{ +self }" }
     method perl { "RawPtr.from({ +self })" }
 }
+
+my constant cvoidptr is export = RawPtr;
 
 # -- some constants
 my constant CHAR_BIT = 8;
@@ -53,19 +49,9 @@ my constant NUMMAP = Map.new(
 
 
 # -- some subs useful for what comes next
-sub ni($_, $size) {
-    .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size
-        && !.HOW.unsigned($_);
-}
-
-sub nu($_, $size) {
-    .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size
-        && ?.HOW.unsigned($_);
-}
-
-sub nn($_, $size) {
-    .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size;
-}
+sub ni($_, $size) { .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size && !.HOW.unsigned($_) }
+sub nu($_, $size) { .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size && ?.HOW.unsigned($_) }
+sub nn($_, $size) { .HOW.WHAT =:= int.HOW.WHAT && .HOW.nativesize($_) == $size }
 
 # -- subsets useful for matching native types
 my subset CChar of Int is export where ni $_, nqp::const::C_TYPE_CHAR;
@@ -108,64 +94,6 @@ my subset CPointer of Mu is export where .REPR eq 'CPointer';
 my subset CArray of Mu is export where .REPR eq 'CArray';
 my subset VMArray of Mu is export where .REPR eq 'VMArray';
 
-# -- type classes
-multi ctypeclass(CChar) { 'char' }
-multi ctypeclass(CShort) { 'short' }
-multi ctypeclass(CInt) { 'int' }
-multi ctypeclass(CLong) { 'long' }
-multi ctypeclass(CLLong) { 'longlong' }
-
-multi ctypeclass(CUChar) { 'uchar' }
-multi ctypeclass(CUShort) { 'ushort' }
-multi ctypeclass(CUInt) { 'uint' }
-multi ctypeclass(CULong) { 'ulong' }
-multi ctypeclass(CULLong) { 'ulonglong' }
-
-multi ctypeclass(CInt8) { BEGIN INTMAP<8> // Str }
-multi ctypeclass(CInt16) { BEGIN INTMAP<16> // Str }
-multi ctypeclass(CInt32) { BEGIN INTMAP<32> // Str }
-multi ctypeclass(CInt64) { BEGIN INTMAP<64> // Str }
-multi ctypeclass(CInt128) { BEGIN INTMAP<128> // Str }
-# -- dispatches to fixed-sized types
-# multi ctypeclass(CIntPtr) { BEGIN INTMAP{PTRBITS} // Str }
-
-multi ctypeclass(CIntX $_) {
-    INTMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str;
-}
-
-multi ctypeclass(CUInt8) { BEGIN INTMAP<8> // Str andthen "u$_" }
-multi ctypeclass(CUInt16) { BEGIN INTMAP<16> // Str andthen "u$_" }
-multi ctypeclass(CUInt32) { BEGIN INTMAP<32> // Str andthen "u$_" }
-multi ctypeclass(CUInt64) { BEGIN INTMAP<64> // Str andthen "u$_" }
-multi ctypeclass(CUInt128) { BEGIN INTMAP<128> // Str andthen "u$_" }
-# -- dispatches to fixed-sized types
-# multi ctypeclass(CUIntPtr) { BEGIN INTMAP{PTRBITS} // Str andthen "u$_" }
-
-multi ctypeclass(CUIntX $_) {
-    (INTMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str) andthen "u$_";
-}
-
-multi ctypeclass(CFloat) { 'float' }
-multi ctypeclass(CDouble) { 'double' }
-multi ctypeclass(CLDouble) { 'longdouble' }
-
-multi ctypeclass(CFloat32) { BEGIN NUMMAP<32> // Str }
-multi ctypeclass(CFloat64) { BEGIN NUMMAP<64> // Str }
-
-multi ctypeclass(CFloatX $_) {
-    NUMMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str;
-}
-
-multi ctypeclass(CPointer) { 'cpointer' }
-multi ctypeclass(CArray) { 'carray' }
-multi ctypeclass(VMArray) { 'vmarray' }
-
-multi ctypeclass(Blob) { 'vmarray' }
-multi ctypeclass(Str) { 'vmarray' } # -- unboxes to Blob
-
-# -- unboxing
-multi cunbox(Str \value) { "{value}\0".encode }
-
 # -- numeric types
 my native cchar is Int is ctype<char> is repr<P6int> is export {}
 my native cshort is Int is ctype<short> is repr<P6int> is export {}
@@ -177,8 +105,7 @@ my native cuchar is Int is ctype<char> is unsigned is repr<P6int> is export {}
 my native cushort is Int is ctype<short> is unsigned is repr<P6int> is export {}
 my native cuint is Int is ctype<int> is unsigned is repr<P6int> is export {}
 my native culong is Int is ctype<long> is unsigned is repr<P6int> is export {}
-my native cullong is Int is ctype<longlong> is unsigned is repr<P6int>
-    is export {}
+my native cullong is Int is ctype<longlong> is unsigned is repr<P6int> is export {}
 
 my native cint8 is Int is nativesize(8) is repr<P6int> is export {}
 my native cint16 is Int is nativesize(16) is repr<P6int> is export {}
@@ -187,23 +114,16 @@ my native cint64 is Int is nativesize(64) is repr<P6int> is export {}
 # my native cint128 is Int is nativesize(128) is repr<P6int> is export {}
 my native cintptr is Int is nativesize(PTRBITS) is repr<P6int> is export {}
 
-my native cuint8 is Int is nativesize(8) is unsigned is repr<P6int>
-    is export {}
-my native cuint16 is Int is nativesize(16) is unsigned is repr<P6int>
-    is export {}
-my native cuint32 is Int is nativesize(32) is unsigned is repr<P6int>
-    is export {}
-my native cuint64 is Int is nativesize(64) is unsigned is repr<P6int>
-    is export {}
-# my native cuint128 is Int is nativesize(128) is unsigned is repr<P6int>
-#     is export {}
-my native cuintptr is Int is nativesize(PTRBITS) is unsigned is repr<P6int>
-    is export {}
+my native cuint8 is Int is nativesize(8) is unsigned is repr<P6int> is export {}
+my native cuint16 is Int is nativesize(16) is unsigned is repr<P6int> is export {}
+my native cuint32 is Int is nativesize(32) is unsigned is repr<P6int> is export {}
+my native cuint64 is Int is nativesize(64) is unsigned is repr<P6int> is export {}
+# my native cuint128 is Int is nativesize(128) is unsigned is repr<P6int> is export {}
+my native cuintptr is Int is nativesize(PTRBITS) is unsigned is repr<P6int> is export {}
 
 my native cfloat is Num is ctype<float> is repr<P6num> is export {}
 my native cdouble is Num is ctype<double>  is repr<P6num> is export {}
-# my native cldouble is Num is ctype<longdouble>  is repr<P6num>
-#     is export {}
+# my native cldouble is Num is ctype<longdouble>  is repr<P6num> is export {}
 
 my native cfloat32 is Num is nativesize(32) is repr<P6num> is export {}
 my native cfloat64 is Num is nativesize(64) is repr<P6num> is export {}
@@ -212,6 +132,8 @@ my native cfloat64 is Num is nativesize(64) is repr<P6num> is export {}
 my class void is repr<Uninstantiable> {
     method CDECL($name) { $name ?? "void $name" !! 'void' }
 }
+
+my class ScalarRef { ... }
 
 my role BoxedPtr[::T = void] {
     has $.raw handles <Int>; # is box_target -- ???
@@ -330,105 +252,36 @@ my role FloatingArray[::T] does RawArray[T] {
     method ASSIGN-POS(uint \pos, \value) { nqp::bindpos_n(self, pos, value) }
 }
 
-my class CCharArray is repr<CArray> is array_type(cchar)
-    does IntegerArray[cchar] {}
-multi crawarraytype(CChar) { CCharArray }
+my class CCharArray is repr<CArray> is array_type(cchar) does IntegerArray[cchar] {}
+my class CShortArray is repr<CArray> is array_type(cshort) does IntegerArray[cshort] {}
+my class CIntArray is repr<CArray> is array_type(cint) does IntegerArray[cint] {}
+my class CLongArray is repr<CArray> is array_type(clong) does IntegerArray[clong] {}
+my class CLLongArray is repr<CArray> is array_type(cllong) does IntegerArray[cllong] {}
 
-my class CShortArray is repr<CArray> is array_type(cshort)
-    does IntegerArray[cshort] {}
-multi crawarraytype(CShort) { CShortArray }
+my class CUCharArray is repr<CArray> is array_type(cuchar) does IntegerArray[cuchar] {}
+my class CUShortArray is repr<CArray> is array_type(cushort) does IntegerArray[cushort] {}
+my class CUIntArray is repr<CArray> is array_type(cuint) does IntegerArray[cuint] {}
+my class CULongArray is repr<CArray> is array_type(culong) does IntegerArray[clong] {}
+my class CULLongArray is repr<CArray> is array_type(cullong) does IntegerArray[cullong] {}
 
-my class CIntArray is repr<CArray> is array_type(cint)
-    does IntegerArray[cint] {}
-multi crawarraytype(CInt) { CIntArray }
+my class CInt8Array is repr<CArray> is array_type(cint8) does IntegerArray[cint8] {}
+my class CInt16Array is repr<CArray> is array_type(cint16) does IntegerArray[cint16] {}
+my class CInt32Array is repr<CArray> is array_type(cint32) does IntegerArray[cint32] {}
+my class CInt64Array is repr<CArray> is array_type(cint64) does IntegerArray[cint64] {}
+# my class CInt128Array is repr<CArray> is array_type(cint128) does IntegerArray[cint128] {}
 
-my class CLongArray is repr<CArray> is array_type(clong)
-    does IntegerArray[clong] {}
-multi crawarraytype(CLong) { CLongArray }
+my class CUInt8Array is repr<CArray> is array_type(cuint8) does IntegerArray[cuint8] {}
+my class CUInt16Array is repr<CArray> is array_type(cuint16) does IntegerArray[cuint16] {}
+my class CUInt32Array is repr<CArray> is array_type(cuint32) does IntegerArray[cuint32] {}
+my class CUInt64Array is repr<CArray> is array_type(cuint64) does IntegerArray[cuint64] {}
+# my class CUInt128Array is repr<CArray> is array_type(cuint128) does IntegerArray[cuint128] {}
 
-my class CLLongArray is repr<CArray> is array_type(cllong)
-    does IntegerArray[cllong] {}
-multi crawarraytype(CLLong) { CLLongArray }
+my class CFloatArray is repr<CArray> is array_type(cfloat) does FloatingArray[cfloat] {}
+my class CDoubleArray is repr<CArray> is array_type(cdouble) does FloatingArray[cdouble] {}
+# my class CLDoubleArray is repr<CArray> is array_type(cldouble) does FloatingArray[cldouble] {}
 
-my class CUCharArray is repr<CArray> is array_type(cuchar)
-    does IntegerArray[cuchar] {}
-multi crawarraytype(CUChar) { CUCharArray }
-
-my class CUShortArray is repr<CArray> is array_type(cushort)
-    does IntegerArray[cushort] {}
-multi crawarraytype(CUShort) { CUShortArray }
-
-my class CUIntArray is repr<CArray> is array_type(cuint)
-    does IntegerArray[cuint] {}
-multi crawarraytype(CUInt) { CUIntArray }
-
-my class CULongArray is repr<CArray> is array_type(culong)
-    does IntegerArray[clong] {}
-multi crawarraytype(CULong) { CULongArray }
-
-my class CULLongArray is repr<CArray> is array_type(cullong)
-    does IntegerArray[cullong] {}
-multi crawarraytype(CULLong) { CULLongArray }
-
-my class CInt8Array is repr<CArray> is array_type(cint8)
-    does IntegerArray[cint8] {}
-multi crawarraytype(CInt8) { CInt8Array }
-
-my class CInt16Array is repr<CArray> is array_type(cint16)
-    does IntegerArray[cint16] {}
-multi crawarraytype(CInt16) { CInt16Array }
-
-my class CInt32Array is repr<CArray> is array_type(cint32)
-    does IntegerArray[cint32] {}
-multi crawarraytype(CInt32) { CInt32Array }
-
-my class CInt64Array is repr<CArray> is array_type(cint64)
-    does IntegerArray[cint64] {}
-multi crawarraytype(CInt64) { CInt64Array }
-
-# my class CInt128Array is repr<CArray> is array_type(cint128)
-#     does IntegerArray[cint128] {}
-# multi crawarraytype(CInt128) { CInt128Array }
-
-my class CUInt8Array is repr<CArray> is array_type(cuint8)
-    does IntegerArray[cuint8] {}
-multi crawarraytype(CUInt8) { CUInt8Array }
-
-my class CUInt16Array is repr<CArray> is array_type(cuint16)
-    does IntegerArray[cuint16] {}
-multi crawarraytype(CUInt16) { CUInt16Array }
-
-my class CUInt32Array is repr<CArray> is array_type(cuint32)
-    does IntegerArray[cuint32] {}
-multi crawarraytype(CUInt32) { CUInt32Array }
-
-my class CUInt64Array is repr<CArray> is array_type(cuint64)
-    does IntegerArray[cuint64] {}
-multi crawarraytype(CUInt64) { CUInt64Array }
-
-# my class CUInt128Array is repr<CArray> is array_type(cuint128)
-#     does IntegerArray[cuint128] {}
-# multi crawarraytype(CUInt128) { CUInt128Array }
-
-my class CFloatArray is repr<CArray> is array_type(cfloat)
-    does FloatingArray[cfloat] {}
-multi crawarraytype(CFloat) { CFloatArray }
-
-my class CDoubleArray is repr<CArray> is array_type(cdouble)
-    does FloatingArray[cdouble] {}
-multi crawarraytype(CDouble) { CDoubleArray }
-
-# my class CLDoubleArray is repr<CArray> is array_type(cldouble)
-#     does FloatingArray[cldouble] {}
-# multi crawarraytype(CLDouble) { CLDoubleArray }
-
-my class CFloat32Array is repr<CArray> is array_type(cfloat32)
-    does FloatingArray[cfloat32] {}
-multi crawarraytype(CFloat32) { CFloat32Array }
-
-my class CFloat64Array is repr<CArray> is array_type(cfloat64)
-    does FloatingArray[cfloat64] {}
-multi crawarraytype(CFloat64) { CFloat64Array }
+my class CFloat32Array is repr<CArray> is array_type(cfloat32) does FloatingArray[cfloat32] {}
+my class CFloat64Array is repr<CArray> is array_type(cfloat64) does FloatingArray[cfloat64] {}
 
 # -- preliminary helper functions
 # -- likely to change with future revisions
@@ -512,28 +365,99 @@ multi cbind(Str $name, Signature $sig, Str :$lib) {
     }
 }
 
-multi cinvoke(Str $name, Signature $sig, Capture $args, Str :$lib) {
-    cbind($name, $sig, :$lib).(|$args);
-}
+multi cinvoke(Str $name, Signature $sig, Capture $args, Str :$lib) { cbind($name, $sig, :$lib).(|$args) }
+multi cinvoke(Str $name, Signature $sig, *@args, Str :$lib) { cbind($name, $sig, :$lib).(|@args) }
 
-multi cinvoke(Str $name, Signature $sig, *@args, Str :$lib) {
-    cbind($name, $sig, :$lib).(|@args);
-}
-
-# -- default responses
+# -- responses
 multi csize(Mu $_, *%) { nqp::nativecallsizeof($_) }
+
+multi ctypeclass(CChar) { 'char' }
+multi ctypeclass(CShort) { 'short' }
+multi ctypeclass(CInt) { 'int' }
+multi ctypeclass(CLong) { 'long' }
+multi ctypeclass(CLLong) { 'longlong' }
+
+multi ctypeclass(CUChar) { 'uchar' }
+multi ctypeclass(CUShort) { 'ushort' }
+multi ctypeclass(CUInt) { 'uint' }
+multi ctypeclass(CULong) { 'ulong' }
+multi ctypeclass(CULLong) { 'ulonglong' }
+
+multi ctypeclass(CInt8) { BEGIN INTMAP<8> // Str }
+multi ctypeclass(CInt16) { BEGIN INTMAP<16> // Str }
+multi ctypeclass(CInt32) { BEGIN INTMAP<32> // Str }
+multi ctypeclass(CInt64) { BEGIN INTMAP<64> // Str }
+multi ctypeclass(CInt128) { BEGIN INTMAP<128> // Str }
+# multi ctypeclass(CIntPtr) { BEGIN INTMAP{PTRBITS} // Str } -- dispatches to fixed-sized types
+multi ctypeclass(CIntX $_) { INTMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str; }
+
+multi ctypeclass(CUInt8) { BEGIN INTMAP<8> // Str andthen "u$_" }
+multi ctypeclass(CUInt16) { BEGIN INTMAP<16> // Str andthen "u$_" }
+multi ctypeclass(CUInt32) { BEGIN INTMAP<32> // Str andthen "u$_" }
+multi ctypeclass(CUInt64) { BEGIN INTMAP<64> // Str andthen "u$_" }
+multi ctypeclass(CUInt128) { BEGIN INTMAP<128> // Str andthen "u$_" }
+# multi ctypeclass(CUIntPtr) { BEGIN INTMAP{PTRBITS} // Str andthen "u$_" } -- dispatches to fixed-sized types
+multi ctypeclass(CUIntX $_) { (INTMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str) andthen "u$_" }
+
+multi ctypeclass(CFloat) { 'float' }
+multi ctypeclass(CDouble) { 'double' }
+multi ctypeclass(CLDouble) { 'longdouble' }
+
+multi ctypeclass(CFloat32) { BEGIN NUMMAP<32> // Str }
+multi ctypeclass(CFloat64) { BEGIN NUMMAP<64> // Str }
+multi ctypeclass(CFloatX $_) { NUMMAP{ CHAR_BIT * nqp::nativecallsizeof($_) } // Str }
+
+multi ctypeclass(CPointer) { 'cpointer' }
+multi ctypeclass(CArray) { 'carray' }
+multi ctypeclass(VMArray) { 'vmarray' }
+
+multi ctypeclass(Blob) { 'vmarray' }
+multi ctypeclass(Str) { 'vmarray' } # -- unboxes to Blob
+
 multi ctypeclass(Mu $_, *%) { fail .^name }
 
-multi cunbox(Mu:D $_, *%) { $_ }
-multi crawptr(Mu:D $_, *%) {
-    nqp::nativecallcast(RawPtr, RawPtr, nqp::decont($_)) }
+multi crawarraytype(CChar) { CCharArray }
+multi crawarraytype(CShort) { CShortArray }
+multi crawarraytype(CInt) { CIntArray }
+multi crawarraytype(CLong) { CLongArray }
+multi crawarraytype(CLLong) { CLLongArray }
+
+multi crawarraytype(CUChar) { CUCharArray }
+multi crawarraytype(CUShort) { CUShortArray }
+multi crawarraytype(CUInt) { CUIntArray }
+multi crawarraytype(CULong) { CULongArray }
+multi crawarraytype(CULLong) { CULLongArray }
+
+multi crawarraytype(CInt8) { CInt8Array }
+multi crawarraytype(CInt16) { CInt16Array }
+multi crawarraytype(CInt32) { CInt32Array }
+multi crawarraytype(CInt64) { CInt64Array }
+# multi crawarraytype(CInt128) { CInt128Array }
+
+multi crawarraytype(CUInt8) { CUInt8Array }
+multi crawarraytype(CUInt16) { CUInt16Array }
+multi crawarraytype(CUInt32) { CUInt32Array }
+multi crawarraytype(CUInt64) { CUInt64Array }
+# multi crawarraytype(CUInt128) { CUInt128Array }
+
+multi crawarraytype(CFloat) { CFloatArray }
+multi crawarraytype(CDouble) { CDoubleArray }
+# multi crawarraytype(CLDouble) { CLDoubleArray }
+multi crawarraytype(CFloat32) { CFloat32Array }
+multi crawarraytype(CFloat64) { CFloat64Array }
+
+multi crawarraytype(Mu $_, *%) { fail .^name }
+
+multi cunbox(Str \value) { "{value}\0".encode }
+multi cunbox(Mu $_, *%) { $_ }
+
+multi crawptr(Mu $_, *%) { nqp::nativecallcast(RawPtr, RawPtr, nqp::decont($_)) }
 
 multi ceval(Numeric $_, *%) { .Str }
 multi ceval(CPointer $_, *%) { "(void*){ nqp::unbox_i($_) }" }
 multi ceval(Mu $_, *%) { fail .^name }
 
-multi cdecl(Mu:U $_, Str $name?, *%) { fail .^name }
-multi crawarraytype(Mu:U $_, *%) { fail .^name }
+multi cdecl(Mu $_, Str $name?, *%) { fail .^name }
 
 multi cvalue(Mu:U $_, $value, *%_) {
     my $array := crawarraytype($_, |%_).new;
