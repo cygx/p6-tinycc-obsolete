@@ -4,7 +4,7 @@ use v6;
 use Test;
 
 use TinyCC::Eval;
-use TinyCC::Types;
+use CTypes;
 
 plan 3;
 
@@ -14,7 +14,7 @@ plan 3;
 }
 
 {
-    my $out = cval(uint64);
+    my $out = cvalue(cllong);
 
     EVAL q:to/__END__/, :lang<C>, init => { .define: N => 33; .declare: :$out };
         extern unsigned long long out;
@@ -29,7 +29,7 @@ plan 3;
         }
         __END__
 
-    ok $out.deref == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
+    ok $out.rv == (0, 1, *+* ... *)[33], 'EVAL can access symbols and defines';
 }
 
 {

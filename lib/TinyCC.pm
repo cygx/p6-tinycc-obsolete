@@ -340,7 +340,7 @@ class TinyCC {
         for %!decls.pairs {
             X::TinyCC::FailedCall.new(:call<add_symbol>).fail
                 if $!api.tcc_add_symbol.($!state, .key,
-                    cvoidptr.new(.value)) < 0;
+                    crawptr(.value)) < 0;
         }
 
         X::TinyCC::FailedCall.new(:call<compile_string>).fail

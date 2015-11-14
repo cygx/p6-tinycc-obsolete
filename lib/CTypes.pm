@@ -15,7 +15,8 @@ proto ceval(Mu:D $_, *%_) is export { .?CEVAL(|%_) // {*} }
 proto cdecl(Mu:U $_, Str $name = '', *%_) is export { .?CDECL($name, |%_) // {*} }
 proto crawarraytype(Mu:U $_, *%_) is export { .?CRAWARRAYTYPE(|%_) // {*} }
 proto czero(Mu:U $_, *%_) is export { .?CZERO(|%_) // {*} }
-proto cvalue(Mu:U $_, $value = czero($_), *%_) is export { .?CVALUE($value, |%_) // {*} }
+proto cvalue(Mu:U $_, $value?, *%_) is export { .?CVALUE($value, |%_) // {*} }
+multi cvalue(Mu:U $_, *%_) { cvalue($_, czero($_), |%_) }
 proto carray(Mu:U $_, *@_, *%_) is export { .?CARRAY(@_, |%_) // {*} }
 
 # -- a dumb pointer
@@ -143,12 +144,13 @@ my role BoxedPtr[::T = void] {
     method CSIZE { PTRSIZE }
     method CTYPECLASS { 'cpointer' }
     method CDECL($name) { cdecl(T, "*$name") }
-    method CEVAL { "({ cdecl($, '*') }){ +self }" }
+    method CEVAL { "({ cdecl(T, '*') }){ +self }" }
     method CUNBOX { $!raw }
+    method CRAWPTR { $!raw }
 
     multi method from(Int \address) { self.new(raw => RawPtr.new(address)) }
     multi method from(Mu \obj) { self.new(raw => crawptr(obj)) }
-    method Numeric { +self }
+    method Numeric { self.Int }
     method gist { self.CEVAL }
     method to(Mu:U \type) { BoxedPtr[type].new(:$!raw) }
     method of { T }
@@ -481,6 +483,7 @@ multi ceval(Numeric $_, *%) { .Str }
 multi ceval(CPointer $_, *%) { "(void*){ nqp::unbox_i($_) }" }
 multi ceval(Mu $_, *%) { fail .^name }
 
+multi cdecl(CLLong, Str $name?, *%) { $name ?? "long long $name" !! 'long long' }
 multi cdecl(Mu $_, Str $name?, *%) { fail .^name }
 
 multi czero(Int, *%) { 0 }

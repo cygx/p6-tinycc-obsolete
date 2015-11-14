@@ -13,7 +13,7 @@ multi EVAL(Cool $code, Str() :$lang! where 'c'|'C', :$tcc, :&init, :$args)
     .(tcc) with &init;
 
     do {
-        CATCH { ($error // $_).fail }
+        CATCH { ($error // $_).rethrow }
         tcc.compile(~$code).run: @($args // ());
     }
 }
