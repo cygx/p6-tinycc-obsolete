@@ -298,31 +298,31 @@ class TinyCC {
                 X::TinyCC::FailedCall.new(:$call).fail
                         if $_ < 0 given do given $opt {
                     when 'opts' {
-                        $!api{$call = 'set_options'}($!state, ~$value);
+                        $!api.tcc_set_options.($!state, ~$value);
                     }
 
                     when 'nostdinc' {
-                        $!api{$call = 'set_options'}($!state, '-nostdinc');
+                        $!api.tcc_set_options.($!state, '-nostdinc');
                     }
 
                     when 'I' {
-                        $!api{$call = 'add_include_path'}($!state, ~$value);
+                        $!api.tcc_add_include_path.($!state, ~$value);
                     }
 
                     when 'isystem' {
-                        $!api{$call = 'add_sysinclude_path'}($!state, ~$value);
+                        $!api.tcc_add_sysinclude_path.($!state, ~$value);
                     }
 
                     when 'L' {
-                        $!api{$call = 'add_library_path'}($!state, ~$value);
+                        $!api.tcc_add_library_path.($!state, ~$value);
                     }
 
                     when 'l' {
-                        $!api{$call = 'add_library'}($!state, ~$value);
+                        $!api.tcc_add_library.($!state, ~$value);
                     }
 
                     when 'nostdlib' {
-                        $!api{$call = 'set_options'}($!state, '-nostdlib');
+                        $!api.tcc_set_options.($!state, '-nostdlib');
                     }
                 }
             }

@@ -322,6 +322,8 @@ proto cinvoke(Mu $, Signature $sig, *@, *%) is export {*}
 
 my class Callsite is repr<NativeCall> {}
 
+# XXX figure out what to pass as typeobj!
+
 sub rvinfo(Mu:U $type) is raw {
     nqp::hash(
         'type', ctypeclass($type) // 'void',
@@ -375,8 +377,6 @@ multi cbind(Str $name, Signature $sig, Str :$lib, Signature :$check) {
         my $args := nqp::list();
         nqp::push($args, cunbox($_))
             for args.list;
-
-say "calling $name with { args.gist }";
 
         nqp::nativecall($rtype, $cs, $args);
     }
