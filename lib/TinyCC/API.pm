@@ -47,7 +47,8 @@ method new($lib) {
             'tcc_set_lib_path', :(TCCState, cstr)),
 
         tcc_set_error_func => cbind(:$lib,
-            'tcc_set_error_func', :(TCCState, cptr, ccallback)),
+            'tcc_set_error_func', :(TCCState, cptr, &cb (cptr, cstr)),
+            check => :(TCCState, cptr, &)),
 
         tcc_set_options => cbind(:$lib,
             'tcc_set_options', :(TCCState, cstr --> cint)),

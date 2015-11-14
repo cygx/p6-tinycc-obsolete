@@ -274,7 +274,7 @@ class TinyCC {
             if $!stage == DONE;
 
         $!errhandler = &cb;
-        $!errpayload = $payload;
+        $!errpayload = $payload // CNULL;
         self;
     }
 
