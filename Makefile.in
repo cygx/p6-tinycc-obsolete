@@ -1,0 +1,28 @@
+PERL6  = perl6
+PROVE  = prove
+MKDEPS = 6make deps
+
+PM := $(wildcard lib/*.pm lib/*/*.pm lib/*/*/*.pm)
+BC := $(PM:lib/%=blib/%.moarvm)
+
+export PERL6LIB = blib
+
+bc: $(BC)
+
+clean:
+	rm -f $(BC)
+
+rescan:
+	cat Makefile.in > Makefile
+	$(MKDEPS) >> Makefile
+
+$(BC): blib/%.pm.moarvm: lib/%.pm
+	$(PERL6) --target=mbc --output=$@ $<
+
+test: $(BC)
+	$(PROVE) -e '$(PERL6)' t
+
+t-%: t/%-*.t $(BC)
+	$<
+
+# auto-generated module dependencies
