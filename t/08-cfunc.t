@@ -4,20 +4,19 @@ use v6;
 
 BEGIN say 1..3;
 
+use CTypes;
 use TinyCC::CFunc;
 use TinyCC { .sysinclude: <stdio.h> }
-
-constant int = int32;
 
 sub ok($cond, $desc) {
     say "{ $cond ?? '' !! 'not ' }ok { ++$ } - $desc";
 }
 
-sub plus(int \a, int \b --> int) is cfunc({ q:to/__END__/ }, tcc) {*}
+sub plus(cint \a, cint \b --> cint) is cfunc({ q:to/__END__/ }, tcc) {*}
     return a + b;
     __END__
 
-sub minus(int \a, int \b --> int) is cfunc({ q:to/__END__/ }, tcc) {*}
+sub minus(cint \a, cint \b --> cint) is cfunc({ q:to/__END__/ }, tcc) {*}
     return a - b;
     __END__
 

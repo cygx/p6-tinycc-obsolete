@@ -31,6 +31,6 @@ blib/TinyCC/Lib/C.pm.moarvm: blib/%.moarvm: ./lib/%  blib/TinyCC/CCall.pm.moarvm
 blib/TinyCC/CInvoke.pm.moarvm: blib/%.moarvm: ./lib/% blib/CTypes.pm.moarvm blib/TinyCC.pm.moarvm
 blib/TinyCC.pm.moarvm: blib/%.moarvm: ./lib/% blib/CTypes.pm.moarvm blib/TinyCC/API.pm.moarvm
 blib/TinyCC/Eval.pm.moarvm: blib/%.moarvm: ./lib/% blib/TinyCC.pm.moarvm
-blib/TinyCC/CFunc.pm.moarvm: blib/%.moarvm: ./lib/% blib/TinyCC.pm.moarvm 
+blib/TinyCC/CFunc.pm.moarvm: blib/%.moarvm: ./lib/% blib/TinyCC.pm.moarvm blib/TinyCC/CInvoke.pm.moarvm
 blib/TinyCC/CCall.pm.moarvm: blib/%.moarvm: ./lib/% blib/TinyCC.pm.moarvm blib/CTypes.pm.moarvm
 blib/TinyCC/API.pm.moarvm: blib/%.moarvm: ./lib/% blib/CTypes.pm.moarvm

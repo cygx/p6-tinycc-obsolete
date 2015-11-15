@@ -317,8 +317,10 @@ my class CSignature {
     }
 
     method prototype($name) {
-        "{ $!returns } { $name }({ @!params ?? @!params.join(', ') !! 'void' })"
+        "{ $!returns } { $name }({ @!params ?? @!params.join(', ') !! 'void' })";
     }
+
+    method ptrcast { "({ self.prototype('(*)') })" }
 }
 
 sub csignature(Signature $s) is export { CSignature.from($s) }
@@ -489,6 +491,8 @@ multi ceval(Numeric $_, *%) { .Str }
 multi ceval(CPointer $_, *%) { "(void*){ nqp::unbox_i($_) }" }
 multi ceval(Mu $_, *%) { fail .^name }
 
+# TODO
+multi cdecl(CInt, Str $name?, *%) { $name ?? "int $name" !! 'int' }
 multi cdecl(CLLong, Str $name?, *%) { $name ?? "long long $name" !! 'long long' }
 multi cdecl(CDouble, Str $name?, *%) { $name ?? "double $name" !! 'double' }
 multi cdecl(Mu $_, Str $name?, *%) { fail .^name }

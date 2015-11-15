@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0
 
 use TinyCC;
-use TinyCC::Invoke;
+use TinyCC::CInvoke;
 
 multi trait_mod:<is>(Routine $r, :$cfunc!) is export {
     given @$cfunc -> [ $arg where Stringy|Callable,
@@ -16,7 +16,7 @@ multi trait_mod:<is>(Routine $r, :$cfunc!) is export {
         my $handler := $r.wrap: sub (*@args, TinyCC :$tcc) {
             $r.unwrap($handler);
             $handler := Nil;
-            $r.wrap: tccbind(tcc.lookup($r.name), $r.signature);
+            $r.wrap: cbind(:tcc, tcc.lookup($r.name), $r.signature);
             $r.(@args, :$tcc);
         }
     }

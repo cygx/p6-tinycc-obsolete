@@ -6,53 +6,52 @@ use TinyCC;
 
 multi cbind(CPointer $fp, Signature $sig, Bool :$tcc!) is export {
     my $address := +$fp;
-    my $rtype := $sig.returns;
-    if $rtype =:= Mu {
-        my $csig = cparams($sig.params).join(', ');
+    my $csig := csignature($sig);
+    if $csig.isvoid {
         my \CODE = qq:to/__END__/;
             int main(void) \{
-                ((void (*)($csig))$address)(ARGS);
+                ({ $csig.ptrcast }$address)(ARGS);
                 return 0;
             }
             __END__
 
-        sub (|args, TinyCC :$tcc) {
-            fail "Arguments { args.gist } do not match signature { $sig.gist }"
-                unless args ~~ $sig;
+        sub (*@args, TinyCC :$tcc) {
+            # BUG why does this check makes thins go book?
+            # fail "Arguments { @args.gist } do not match signature { $sig.gist }"
+            #     unless \(@args) ~~ $sig;
 
             my \CLEANUP = not $tcc // $*TINYCC;
             my \tcc = $tcc // $*TINYCC // TinyCC.new;
             LEAVE { tcc.discard if CLEANUP }
 
-            tcc.define(ARGS => cargs(args.list).join(', '));
+            tcc.define(ARGS => @args.map(&ceval).join(', '));
             tcc.compile(CODE).run;
             Nil;
         }
     }
     else {
-        my $ctype := ctype($rtype);
-        my $csig = cparams($sig.params).join(', ');
         my \CODE = qq:to/__END__/;
-            extern $ctype rv;
+            extern { $csig.returns } rv;
             int main(void) \{
-                rv = (($ctype (*)($csig))$address)(ARGS);
+                rv = ({ $csig.ptrcast }$address)(ARGS);
                 return 0;
             }
             __END__
 
-        sub (|args, TinyCC :$tcc) {
-            fail "Arguments { args.gist } do not match signature { $sig.gist }"
-                unless args ~~ $sig;
+        sub (*@args, TinyCC :$tcc) {
+            # BUG why does this check makes thins go book?
+            # fail "Arguments { @args.gist } do not match signature { $sig.gist }"
+            #     unless \(|@args) ~~ $sig;
 
             my \CLEANUP = not $tcc // $*TINYCC;
             my \tcc = $tcc // $*TINYCC // TinyCC.new;
             LEAVE { tcc.discard if CLEANUP }
 
-            my $rv := cval($rtype);
-            tcc.define(ARGS => cargs(args.list).join(', '));
+            my $rv := cvalue($sig.returns);
+            tcc.define(ARGS => @args.map(&ceval).join(', '));
             tcc.declare(:$rv);
             tcc.compile(CODE).run;
-            rv($rv);
+            $rv.rv;
         }
     }
 }
