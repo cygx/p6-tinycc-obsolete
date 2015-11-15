@@ -119,7 +119,7 @@ my native cuint64 is Int is nativesize(64) is unsigned is repr<P6int> is export 
 my native cuintptr is Int is nativesize(PTRBITS) is unsigned is repr<P6int> is export {}
 
 my native cfloat is Num is ctype<float> is repr<P6num> is export {}
-my native cdouble is Num is ctype<double>  is repr<P6num> is export {}
+my native cdouble is Num is ctype<double> is repr<P6num> is export {}
 # my native cldouble is Num is ctype<longdouble>  is repr<P6num> is export {}
 
 my native cfloat32 is Num is nativesize(32) is repr<P6num> is export {}
@@ -302,12 +302,14 @@ my class CParameter {
 my class CSignature {
     has $.returns;
     has @.params;
+    has $.isvoid;
 
     method arity { +@!params }
 
     method from(Signature $sig) {
-        self.bless(
-            returns => cdecl($sig.returns),
+        my $isvoid = $sig.returns =:= Mu;
+        self.bless(:$isvoid,
+            returns => $isvoid ?? 'void' !! cdecl($sig.returns),
             params => $sig.params.grep(*.positional).map({
                 CParameter.new(name => .name, type => cdecl(.type));
             }),
@@ -488,6 +490,7 @@ multi ceval(CPointer $_, *%) { "(void*){ nqp::unbox_i($_) }" }
 multi ceval(Mu $_, *%) { fail .^name }
 
 multi cdecl(CLLong, Str $name?, *%) { $name ?? "long long $name" !! 'long long' }
+multi cdecl(CDouble, Str $name?, *%) { $name ?? "double $name" !! 'double' }
 multi cdecl(Mu $_, Str $name?, *%) { fail .^name }
 
 multi czero(Int, *%) { 0 }

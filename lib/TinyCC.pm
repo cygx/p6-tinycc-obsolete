@@ -157,7 +157,7 @@ class TinyCC {
         my $name := $r.name;
         my $sig := csignature($r.signature);
         @!code.push: qq:to/__END__/;
-            { $sig.prototype } \{
+            { $sig.prototype($name) } \{
             { $body.chomp.indent(4) }
             }
             __END__
