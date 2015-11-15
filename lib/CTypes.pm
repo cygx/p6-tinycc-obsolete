@@ -19,22 +19,15 @@ proto cvalue(Mu:U $_, $value?, *%_) is export { .?CVALUE($value, |%_) // {*} }
 multi cvalue(Mu:U $_, *%_) { cvalue($_, czero($_), |%_) }
 proto carray(Mu:U $_, *@_, *%_) is export { .?CARRAY(@_, |%_) // {*} }
 
-# -- a dumb pointer
-my class RawPtr is repr<CPointer> {
-    method new(Mu \address) { nqp::box_i(nqp::unbox_i(address), self) }
-    method Numeric { nqp::unbox_i(self) }
-    method Int { +self }
-    method gist { "ptr|{ +self }" }
-    method perl { "RawPtr.from({ +self })" }
-}
-
-my constant cvoidptr is export = RawPtr;
-sub CNULL is export { once cvoidptr.new(0) }
-
 # -- some constants
+my class RawPtr is repr<CPointer> { ... }
+
 my constant CHAR_BIT = 8;
 my constant PTRSIZE = nqp::nativecallsizeof(RawPtr);
 my constant PTRBITS = CHAR_BIT * PTRSIZE;
+my constant cvoidptr is export = RawPtr;
+
+sub CNULL is export { once cvoidptr.new(0) }
 
 my constant INTMAP = Map.new(
     map { CHAR_BIT * nqp::nativecallsizeof($_) => .^name },
@@ -132,7 +125,7 @@ my native cdouble is Num is ctype<double>  is repr<P6num> is export {}
 my native cfloat32 is Num is nativesize(32) is repr<P6num> is export {}
 my native cfloat64 is Num is nativesize(64) is repr<P6num> is export {}
 
-# -- a smart pointer
+# -- pointer types
 my class void is repr<Uninstantiable> {
     method CDECL($name) { $name ?? "void $name" !! 'void' }
 }
@@ -166,6 +159,15 @@ my role BoxedPtr[::T = void] {
             default { die "Cannot dereference pointers to type { T.^name }" }
         }
     }
+}
+
+my class RawPtr {
+    method new(Mu \address) { nqp::box_i(nqp::unbox_i(address), self) }
+    method Numeric { nqp::unbox_i(self) }
+    method Int { +self }
+    method gist { "ptr|{ +self }" }
+    method perl { "RawPtr.from({ +self })" }
+    method to(Mu:U \type) { BoxedPtr[type].new(raw => self) }
 }
 
 # -- a scalar reference

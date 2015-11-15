@@ -24,9 +24,9 @@ plan 4;
     ok !defined($q), 'cannot lookup undeclared symbol';
 
     my $ip = tcc.lookup('i', int32);
-    ok $ip.deref == 42, 'can acces value through typed pointer';
+    ok $ip.rv == 42, 'can acces value through typed pointer';
 
-    my $i := tcc.lookup('i', var => int32);
+    my $i := tcc.lookup('i', int32).lv;
     ok $i == 42, 'can access value through proxy variable';
 }
 
