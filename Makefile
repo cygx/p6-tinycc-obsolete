@@ -12,7 +12,7 @@ bc: $(BC)
 clean:
 	rm -f $(BC)
 
-rescan:
+deps:
 	cat Makefile.in > Makefile
 	$(MKDEPS) >> Makefile
 
@@ -27,7 +27,7 @@ t-%: t/%-*.t $(BC)
 
 # auto-generated module dependencies
 blib/CTypes.pm.moarvm: blib/%.moarvm: ./lib/% 
-blib/TinyCC/Lib/C.pm.moarvm: blib/%.moarvm: ./lib/%  blib/TinyCC/CCall.pm.moarvm blib/TinyCC.pm.moarvm
+blib/TinyCC/Lib/C.pm.moarvm: blib/%.moarvm: ./lib/% blib/CTypes.pm.moarvm blib/TinyCC/CCall.pm.moarvm blib/TinyCC.pm.moarvm
 blib/TinyCC/CInvoke.pm.moarvm: blib/%.moarvm: ./lib/% blib/CTypes.pm.moarvm blib/TinyCC.pm.moarvm
 blib/TinyCC.pm.moarvm: blib/%.moarvm: ./lib/% blib/CTypes.pm.moarvm blib/TinyCC/API.pm.moarvm
 blib/TinyCC/Eval.pm.moarvm: blib/%.moarvm: ./lib/% blib/TinyCC.pm.moarvm

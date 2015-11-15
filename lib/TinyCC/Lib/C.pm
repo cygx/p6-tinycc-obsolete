@@ -1,5 +1,5 @@
 module TinyCC::Lib::C {
-    use TinyCC::CTypes;
+    use CTypes;
     use TinyCC::CCall;
 
     use TinyCC *;
@@ -59,19 +59,22 @@ module TinyCC::Lib::C {
     }
 
     constant time_t = do {
+        my \SIZE = eval('sizeof (time_t)', <time.h>);
+        my \IS-FLOAT = eval('(time_t)0.5 == 0.5', <time.h>);
+        my \IS-SIGNED = !IS-FLOAT && eval('(time_t)-1 < 0', <time.h>);
 
-        given p6_native_libc_time_time_size() {
+        given SIZE {
             when 4 {
-                if p6_native_libc_time_time_is_float() { float }
+                if IS-FLOAT { float }
                 else {
-                    if p6_native_libc_time_time_is_signed() { int32 }
+                    if IS-SIGNED { int32 }
                     else { uint32 }
                 }
             }
             when 8 {
-                if p6_native_libc_time_time_is_float() { double }
+                if IS-FLOAT { double }
                 else {
-                    if p6_native_libc_time_time_is_signed() { int64 }
+                    if IS-SIGNED { int64 }
                     else { uint64 }
                 }
             }
@@ -79,47 +82,16 @@ module TinyCC::Lib::C {
         }
     }
 
-    constant _IOFBF = do {
-        sub p6_native_libc_stdio_iofbf(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_iofbf;
-    }
+    constant _IOFBF   = eval('_IOFBF', <stdio.h>);
+    constant _IOLBF   = eval('_IOLBF', <stdio.h>);
+    constant _IONBF   = eval('_IONBF', <stdio.h>);
+    constant BUFSIZ   = eval('BUFSIZ', <stdio.h>);
+    constant EOF      = eval('EOF', <stdio.h>);
+    constant SEEK_CUR = eval('SEEK_CUR', <stdio.h>);
+    constant SEEK_END = eval('SEEK_END', <stdio.h>);
+    constant SEEK_SET = eval('SEEK_SET', <stdio.h>);
 
-    constant _IOLBF = do {
-        sub p6_native_libc_stdio_iolbf(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_iolbf;
-    }
-
-    constant _IONBF = do {
-        sub p6_native_libc_stdio_ionbf(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_ionbf;
-    }
-
-    constant BUFSIZ = do {
-        sub p6_native_libc_stdio_bufsiz(--> size_t) is native(CTDLL) { * }
-        p6_native_libc_stdio_bufsiz;
-    }
-
-    constant EOF = do {
-        sub p6_native_libc_stdio_eof(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_eof;
-    }
-
-    constant SEEK_CUR = do {
-        sub p6_native_libc_stdio_seek_cur(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_seek_cur;
-    }
-
-    constant SEEK_END = do {
-        sub p6_native_libc_stdio_seek_end(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_seek_end;
-    }
-
-    constant SEEK_SET = do {
-        sub p6_native_libc_stdio_seek_set(--> int) is native(CTDLL) { * }
-        p6_native_libc_stdio_seek_set;
-    }
-
-    constant Ptr = Pointer;
+    constant Ptr = cvoidptr;
     constant &sizeof = &nativesizeof;
 
     our sub NULL { once Ptr.new(0) }

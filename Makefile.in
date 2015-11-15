@@ -12,7 +12,7 @@ bc: $(BC)
 clean:
 	rm -f $(BC)
 
-rescan:
+deps:
 	cat Makefile.in > Makefile
 	$(MKDEPS) >> Makefile
 
