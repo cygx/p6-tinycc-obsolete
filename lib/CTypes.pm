@@ -96,6 +96,7 @@ my subset CFloatX of Num is export where nn $_, 0;
 my subset CPointer of Mu is export where .REPR eq 'CPointer';
 my subset CArray of Mu is export where .REPR eq 'CArray';
 my subset VMArray of Mu is export where .REPR eq 'VMArray';
+my subset CStruct of Mu is export where .REPR eq 'CStruct';
 
 # -- numeric types
 my native cchar is Int is ctype<char> is repr<P6int> is export {}
@@ -474,6 +475,7 @@ multi crawarraytype(CFloat64) { CFloat64Array }
 
 multi crawarraytype(Mu $_, *%) { fail .^name }
 
+multi cunbox(CStruct $_) { fail "Cannot pass CStruct of type { .^name } by value" }
 multi cunbox(Str \value) { "{value}\0".encode }
 multi cunbox(Mu $_, *%) { $_ }
 

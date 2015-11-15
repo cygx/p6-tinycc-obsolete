@@ -34,8 +34,8 @@ plan 3;
 
 {
     my class Point is repr<CStruct> {
-        has num64 $.x;
-        has num64 $.y;
+        has cdouble $.x;
+        has cdouble $.y;
     }
 
     my $point = Point.new(x => 0e0, y => 0e0);
